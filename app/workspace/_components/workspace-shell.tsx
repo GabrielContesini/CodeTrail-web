@@ -24,7 +24,6 @@ import {
   BookOpen,
   ChartSpline,
   CheckSquare,
-  ChevronLeft,
   ChevronRight,
   FolderKanban,
   Layers3,
@@ -73,6 +72,11 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
   const { reduced, hoverLift, press, transition } = useMotionPreferences();
   const section = resolveSection(pathname.split("/").filter(Boolean).slice(1));
   const meta = routeMetaBySection[section];
+  const sidebarWidthClass = collapsed ? "md:w-[96px]" : "md:w-[280px]";
+  const sidebarPaddingClass = collapsed ? "md:!px-3 md:!py-5" : "";
+  const sidebarShellTransition = reduced
+    ? "transition-[width,padding,transform] duration-150"
+    : "transition-[width,padding,transform,box-shadow,border-color,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]";
 
   const initials = getInitials(data?.profile?.full_name || user.fullName || user.email);
   const displayName = data?.profile?.full_name || user.fullName || "Seu workspace";
@@ -131,29 +135,29 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
         </AnimatePresence>
 
         <motion.aside
-          layout
-          transition={transition}
           initial={reduced ? false : { x: -22, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           data-testid="workspace-sidebar"
           data-state={collapsed ? "collapsed" : "expanded"}
           className={cx(
             "workspace-panel workspace-panel--elevated z-50 shrink-0",
-            "fixed inset-y-0 left-0 flex flex-col gap-6 border-y-0 border-l-0 rounded-none md:relative md:rounded-2xl md:border-y md:border-l",
+            "fixed inset-y-0 left-0 flex flex-col gap-6 overflow-hidden border-y-0 border-l-0 rounded-none md:relative md:rounded-2xl md:border-y md:border-l",
             "w-[280px] -translate-x-full md:translate-x-0",
+            sidebarWidthClass,
+            sidebarPaddingClass,
+            sidebarShellTransition,
             mobileNavOpen && "translate-x-0 border-r",
-            collapsed ? "md:w-[88px] items-center px-3 py-5" : "md:w-[280px] p-5 lg:p-6",
+            collapsed ? "items-center p-5" : "p-5 lg:p-6",
           )}
         >
           <motion.div
-            layout
             transition={transition}
             className={cx(
               "w-full",
               collapsed ? "flex flex-col items-center gap-3" : "relative flex items-center justify-between",
             )}
           >
-            <motion.div layout className={cx("flex items-center gap-3", collapsed && "justify-center")}>
+            <motion.div className={cx("flex items-center gap-3", collapsed && "justify-center")}>
               <motion.div
                 whileHover={hoverLift}
                 transition={transition}
@@ -192,11 +196,11 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
                 title={collapsed ? "Expandir sidebar" : "Recolher sidebar"}
               >
                 <motion.span
-                  animate={{ rotate: collapsed ? 0 : 0 }}
-                  transition={transition}
+                  animate={reduced ? undefined : { rotate: collapsed ? 0 : 180 }}
+                  transition={createTransition(reduced, motionTokens.duration.fast)}
                   className="inline-flex"
                 >
-                  {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+                  <ChevronRight size={16} />
                 </motion.span>
               </IconButton>
               <IconButton
@@ -234,7 +238,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
             ) : null}
           </AnimatePresence>
 
-          <motion.div className="w-full" layout>
+          <motion.div className="w-full">
             <motion.div whileHover={hoverLift} whileTap={press} transition={transition}>
               <Link
                 href="/workspace/sessions"
@@ -339,8 +343,8 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
             })}
           </motion.nav>
 
-          <motion.div layout className="mt-auto flex flex-col gap-4 border-t border-border pt-5">
-            <motion.div layout className={cx("flex items-center gap-3", collapsed && "justify-center")}>
+          <motion.div className="mt-auto flex flex-col gap-4 border-t border-border pt-5">
+            <motion.div className={cx("flex items-center gap-3", collapsed && "justify-center")}>
               <motion.div
                 className="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/70 bg-white/[0.03] font-display text-text-secondary"
                 whileHover={hoverLift}

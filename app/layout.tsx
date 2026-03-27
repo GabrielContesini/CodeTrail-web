@@ -2,6 +2,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
 import { JetBrains_Mono, Manrope, Space_Grotesk } from "next/font/google";
+import { CustomCursor } from "@/app/components/custom-cursor";
 import "./globals.css";
 
 const displayFont = Space_Grotesk({
@@ -43,6 +44,7 @@ export default function RootLayout({
     <html lang="pt-BR">
       <body className={`${displayFont.variable} ${bodyFont.variable} ${uiFont.variable}`}>
         {children}
+        <CustomCursor />
         <Analytics />
         <SpeedInsights />
       </body>

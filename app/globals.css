@@ -229,6 +229,156 @@ html[data-cursor="native"] [role="button"] {
   cursor: auto !important;
 }
 
+html[data-cursor-overlay] body,
+html[data-cursor-overlay] a,
+html[data-cursor-overlay] button,
+html[data-cursor-overlay] [role="button"],
+html[data-cursor-overlay] input[type="submit"],
+html[data-cursor-overlay] input[type="button"],
+html[data-cursor-overlay] summary,
+html[data-cursor-overlay] label[for],
+html[data-cursor-overlay] .cursor-pointer {
+  cursor: none !important;
+}
+
+.ct-cursor {
+  --cursor-ring-x: -120px;
+  --cursor-ring-y: -120px;
+  --cursor-core-x: -120px;
+  --cursor-core-y: -120px;
+  position: fixed;
+  inset: 0;
+  z-index: 180;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.ct-cursor[data-visible="true"] {
+  opacity: 1;
+}
+
+.ct-cursor__halo,
+.ct-cursor__ring,
+.ct-cursor__core,
+.ct-cursor__glyph {
+  position: fixed;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  will-change: transform, opacity, box-shadow, border-color;
+}
+
+.ct-cursor__halo,
+.ct-cursor__ring {
+  transform: translate3d(var(--cursor-ring-x), var(--cursor-ring-y), 0) translate(-50%, -50%);
+  border-radius: 999px;
+  transition:
+    width 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    height 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease,
+    background-color 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ct-cursor__halo {
+  width: 34px;
+  height: 34px;
+  background: radial-gradient(circle, rgba(50, 208, 255, 0.18) 0%, rgba(50, 208, 255, 0.06) 42%, transparent 72%);
+  filter: blur(16px);
+  opacity: 0.78;
+}
+
+.ct-cursor__ring {
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(50, 208, 255, 0.45);
+  background: rgba(50, 208, 255, 0.04);
+  box-shadow:
+    0 0 0 1px rgba(50, 208, 255, 0.07),
+    0 0 24px rgba(50, 208, 255, 0.14);
+}
+
+.ct-cursor__core {
+  width: 6px;
+  height: 6px;
+  transform: translate3d(var(--cursor-core-x), var(--cursor-core-y), 0) translate(-50%, -50%);
+  border-radius: 999px;
+  background: rgba(50, 208, 255, 0.96);
+  box-shadow:
+    0 0 0 4px rgba(50, 208, 255, 0.08),
+    0 0 18px rgba(50, 208, 255, 0.28);
+  transition:
+    width 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    height 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 140ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ct-cursor__glyph {
+  transform: translate3d(var(--cursor-core-x), var(--cursor-core-y), 0) translate(-50%, -50%) scale(0.72);
+  font-family: var(--font-ui), sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  color: rgba(4, 9, 15, 0.96);
+  opacity: 0;
+  transition:
+    opacity 180ms ease,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ct-cursor[data-variant="action"] .ct-cursor__halo {
+  width: 78px;
+  height: 78px;
+  opacity: 0.92;
+  background: radial-gradient(circle, rgba(50, 208, 255, 0.22) 0%, rgba(50, 208, 255, 0.08) 45%, transparent 74%);
+}
+
+.ct-cursor[data-variant="action"] .ct-cursor__ring {
+  width: 54px;
+  height: 54px;
+  border-color: rgba(50, 208, 255, 0.68);
+  background: rgba(50, 208, 255, 0.08);
+  box-shadow:
+    0 0 0 1px rgba(50, 208, 255, 0.12),
+    0 0 30px rgba(50, 208, 255, 0.22),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.ct-cursor[data-variant="action"] .ct-cursor__core {
+  width: 10px;
+  height: 10px;
+  background: rgba(50, 208, 255, 0.98);
+  box-shadow:
+    0 0 0 7px rgba(50, 208, 255, 0.1),
+    0 0 24px rgba(50, 208, 255, 0.34);
+}
+
+.ct-cursor[data-variant="action"] .ct-cursor__glyph {
+  opacity: 1;
+  transform: translate3d(var(--cursor-core-x), var(--cursor-core-y), 0) translate(-50%, -50%) scale(1);
+}
+
+.ct-cursor[data-pressed="true"] .ct-cursor__halo,
+.ct-cursor[data-pressed="true"] .ct-cursor__ring,
+.ct-cursor[data-pressed="true"] .ct-cursor__core {
+  transform: translate3d(var(--cursor-ring-x), var(--cursor-ring-y), 0) translate(-50%, -50%) scale(0.92);
+}
+
+.ct-cursor[data-pressed="true"] .ct-cursor__core,
+.ct-cursor[data-pressed="true"] .ct-cursor__glyph {
+  transform: translate3d(var(--cursor-core-x), var(--cursor-core-y), 0) translate(-50%, -50%) scale(0.92);
+}
+
+.ct-cursor[data-variant="native"],
+.ct-cursor[data-visible="false"] {
+  opacity: 0;
+}
+
 @layer components {
   .workspace-skeleton-block,
   .workspace-skeleton-line {
