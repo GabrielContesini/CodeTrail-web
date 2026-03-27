@@ -2,10 +2,9 @@
 
 import { motion, type HTMLMotionProps } from "framer-motion";
 import Link from "next/link";
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { BadgeCheck, CircleAlert, LoaderCircle } from "lucide-react";
 import {
-  createTransition,
   fadeUpVariants,
   scaleInVariants,
   useMotionPreferences,

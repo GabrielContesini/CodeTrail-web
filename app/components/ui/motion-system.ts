@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { useReducedMotion, type Transition, type Variants } from "framer-motion";
 
 export const motionTokens = {
@@ -34,11 +34,11 @@ export const motionTokens = {
 
 export function useStableReducedMotion() {
   const prefersReducedMotion = useReducedMotion();
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
+  const hydrated = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   return hydrated ? Boolean(prefersReducedMotion) : false;
 }

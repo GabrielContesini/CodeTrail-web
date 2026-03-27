@@ -21,7 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FeedbackMessage, Surface } from "@/app/components/ui/system-primitives";
 import { useStableReducedMotion } from "@/app/components/ui/motion-system";
 import { GhostButton, Pill, PrimaryButton, SecondaryButton } from "@/app/workspace/_components/workspace-ui";
@@ -74,6 +74,56 @@ export function WorkspaceOnboarding({
     };
   }, [open]);
 
+  const handleSkip = useCallback(async () => {
+    if (submitting) {
+      return;
+    }
+
+    if (isFirstRun) {
+      setSubmitting(true);
+      try {
+        await onComplete();
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    onClose();
+  }, [isFirstRun, onClose, onComplete, submitting]);
+
+  const handlePrimaryAction = useCallback(async () => {
+    if (!isLastStep) {
+      setStepIndex((current) => Math.min(current + 1, onboardingMeta.steps.length - 1));
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      if (isFirstRun) {
+        await onComplete();
+      } else {
+        onClose();
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }, [isFirstRun, isLastStep, onClose, onComplete, onboardingMeta.steps.length]);
+
+  const handleActivationRoute = useCallback(async (href: string) => {
+    setSubmitting(true);
+    try {
+      if (isFirstRun) {
+        await onComplete();
+      } else {
+        onClose();
+      }
+      router.push(href);
+    } finally {
+      setSubmitting(false);
+    }
+  }, [isFirstRun, onClose, onComplete, router]);
+
   useEffect(() => {
     if (!open) {
       return;
@@ -104,57 +154,7 @@ export function WorkspaceOnboarding({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isLastStep, onboardingMeta.steps.length, open]);
-
-  async function handleSkip() {
-    if (submitting) {
-      return;
-    }
-
-    if (isFirstRun) {
-      setSubmitting(true);
-      try {
-        await onComplete();
-      } finally {
-        setSubmitting(false);
-      }
-      return;
-    }
-
-    onClose();
-  }
-
-  async function handlePrimaryAction() {
-    if (!isLastStep) {
-      setStepIndex((current) => Math.min(current + 1, onboardingMeta.steps.length - 1));
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      if (isFirstRun) {
-        await onComplete();
-      } else {
-        onClose();
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function handleActivationRoute(href: string) {
-    setSubmitting(true);
-    try {
-      if (isFirstRun) {
-        await onComplete();
-      } else {
-        onClose();
-      }
-      router.push(href);
-    } finally {
-      setSubmitting(false);
-    }
-  }
+  }, [handlePrimaryAction, handleSkip, isLastStep, onboardingMeta.steps.length, open]);
 
   const overlayTransition = reduceMotion
     ? { duration: 0.16 }

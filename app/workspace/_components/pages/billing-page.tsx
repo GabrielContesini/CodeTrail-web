@@ -4,8 +4,6 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowUpRight,
-  BadgeCheck,
-  CircleAlert,
   Clock3,
   CreditCard,
   Receipt,

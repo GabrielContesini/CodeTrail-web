@@ -453,11 +453,7 @@ export function MindMapsEditorPage() {
     });
   }, []);
 
-  if (!featureEnabled) {
-    return <LockedFeaturePage title="Mind maps premium bloqueados" feature="Mind Maps" />;
-  }
-
-  function commitDraft(nextDraft: MindMapDocument, nextNodeId?: string | null) {
+  const commitDraft = useCallback((nextDraft: MindMapDocument, nextNodeId?: string | null) => {
     if (!selectedRef.current) return;
 
     const nodeIds = new Set(nextDraft.nodes.map((item) => item.id));
@@ -486,7 +482,7 @@ export function MindMapsEditorPage() {
       setConnectMode(false);
     }
     setDirty(true);
-  }
+  }, []);
 
   const flushScheduledDraftCommit = useCallback(() => {
     if (!pendingDraftCommitRef.current) {
@@ -501,7 +497,7 @@ export function MindMapsEditorPage() {
     const pendingCommit = pendingDraftCommitRef.current;
     pendingDraftCommitRef.current = null;
     commitDraft(pendingCommit.document, pendingCommit.nodeId);
-  }, []);
+  }, [commitDraft]);
 
   const scheduleDraftCommit = useCallback(
     (nextDraft: MindMapDocument, nextNodeId?: string | null) => {
@@ -523,7 +519,7 @@ export function MindMapsEditorPage() {
         commitDraft(pendingCommit.document, pendingCommit.nodeId);
       });
     },
-    [],
+    [commitDraft],
   );
 
   async function persistDocument(
@@ -958,6 +954,10 @@ export function MindMapsEditorPage() {
 
     await handleNodeActivationRef.current(nodeId);
   }, [flushScheduledDraftCommit]);
+
+  if (!featureEnabled) {
+    return <LockedFeaturePage title="Mind maps premium bloqueados" feature="Mind Maps" />;
+  }
 
   function handleFitCanvas() {
     if (!draft || !viewportSize.width || !viewportSize.height) return;

@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useWorkspace } from "@/app/workspace/_components/workspace-provider";
-import { createTransition, useMotionPreferences } from "@/app/components/ui/motion-system";
+import { useMotionPreferences } from "@/app/components/ui/motion-system";
 import {
   EmptyState,
   PageFrame,
@@ -26,7 +26,7 @@ export function QuickAction({
   icon: React.ReactNode;
   className?: string;
 }) {
-  const { reduced, hoverLift, press, transition } = useMotionPreferences();
+  const { hoverLift, press, transition } = useMotionPreferences();
   return (
     <motion.div whileHover={hoverLift} whileTap={press} transition={transition} className={className}>
       <Link
