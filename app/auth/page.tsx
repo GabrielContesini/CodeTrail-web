@@ -13,7 +13,7 @@ import {
   parseAuthPlan,
 } from "@/utils/auth/oauth";
 import { persistPlanIntent as persistPlanIntentRecord } from "@/utils/auth/plan-intent";
-import { createClient } from "@/utils/supabase/client";
+import { createClient, hasSupabaseClientEnv } from "@/utils/supabase/client";
 import { createCheckout, waitForBillingActivation } from "@/utils/workspace/api";
 import type { BillingPlanCode } from "@/utils/workspace/types";
 import {
@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const brandMark = "/design/CodeTrailMainIcon.png";
 
@@ -63,7 +63,7 @@ const planCatalog: Record<
 export default function AuthPage() {
   const { selectedPlan, clearIntent } = usePlanIntent();
   const router = useRouter();
-  const [supabase] = useState(() => createClient());
+  const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null);
   const [queryPlan, setQueryPlan] = useState<BillingPlanCode | null>(null);
   const [target, setTarget] = useState<"workspace" | "download">("workspace");
   const [nextPath, setNextPath] = useState<string | null>(null);
@@ -82,6 +82,18 @@ export default function AuthPage() {
   const activePlan = queryPlan ?? selectedPlan;
   const activePlanMeta = activePlan ? planCatalog[activePlan] : null;
 
+  function getSupabaseClient() {
+    if (!hasSupabaseClientEnv()) {
+      return null;
+    }
+
+    if (!supabaseRef.current) {
+      supabaseRef.current = createClient();
+    }
+
+    return supabaseRef.current;
+  }
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setQueryPlan(parseAuthPlan(params.get("plan")));
@@ -99,6 +111,13 @@ export default function AuthPage() {
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "");
     const password = String(formData.get("password") ?? "");
+    const supabase = getSupabaseClient();
+
+    if (!supabase) {
+      setErrorMsg("A autenticacao do Supabase ainda nao esta configurada neste ambiente.");
+      setIsLoading(false);
+      return;
+    }
 
     try {
       if (isLogin) {
@@ -177,6 +196,12 @@ export default function AuthPage() {
     planCode: BillingPlanCode,
     accessToken?: string | null,
   ) {
+    const supabase = getSupabaseClient();
+
+    if (!supabase) {
+      throw new Error("A autenticacao do Supabase ainda nao esta configurada neste ambiente.");
+    }
+
     const checkout = await createCheckout(
       supabase,
       planCode,
@@ -202,6 +227,14 @@ export default function AuthPage() {
     setIsGoogleLoading(true);
     setErrorMsg("");
     setSuccessMsg("");
+
+    const supabase = getSupabaseClient();
+
+    if (!supabase) {
+      setErrorMsg("O login com Google ainda nao esta habilitado neste ambiente do CodeTrail.");
+      setIsGoogleLoading(false);
+      return;
+    }
 
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -236,6 +269,12 @@ export default function AuthPage() {
   async function confirmEmbeddedCheckout() {
     if (!embeddedCheckout) {
       throw new Error("Nao foi possivel localizar a sessao de checkout.");
+    }
+
+    const supabase = getSupabaseClient();
+
+    if (!supabase) {
+      throw new Error("A autenticacao do Supabase ainda nao esta configurada neste ambiente.");
     }
 
     await waitForBillingActivation(supabase, embeddedCheckout.planCode);

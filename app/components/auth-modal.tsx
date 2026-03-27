@@ -12,11 +12,11 @@ import {
 } from "@/app/components/ui/system-primitives";
 import { usePlanIntent } from "@/store/plan-intent-store";
 import { buildGoogleCallbackUrl, getAuthErrorMessage } from "@/utils/auth/oauth";
-import { createClient } from "@/utils/supabase/client";
+import { createClient, hasSupabaseClientEnv } from "@/utils/supabase/client";
 import { ArrowRight, Loader2, X } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 const brandMark = "/design/CodeTrailMainIcon.png";
 
@@ -28,13 +28,25 @@ interface AuthModalProps {
 export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const router = useRouter();
   const { selectedPlan, clearIntent } = usePlanIntent();
-  const [supabase] = useState(() => createClient());
+  const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null);
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
   if (!isOpen) return null;
+
+  function getSupabaseClient() {
+    if (!hasSupabaseClientEnv()) {
+      return null;
+    }
+
+    if (!supabaseRef.current) {
+      supabaseRef.current = createClient();
+    }
+
+    return supabaseRef.current;
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -78,6 +90,14 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   async function handleGoogleAuth() {
     setIsGoogleLoading(true);
     setErrorMsg("");
+
+    const supabase = getSupabaseClient();
+
+    if (!supabase) {
+      setErrorMsg("O login com Google ainda nao esta habilitado neste ambiente do CodeTrail.");
+      setIsGoogleLoading(false);
+      return;
+    }
 
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
