@@ -76,6 +76,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
           ? `/workspace/settings/billing?checkout=${selectedPlan}`
           : "/download/windows";
 
+      await maybeSendWelcomeEmail(selectedPlan);
       clearIntent();
       router.push(nextRoute);
       onClose();
@@ -239,4 +240,24 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
       </Surface>
     </div>
   );
+}
+
+async function maybeSendWelcomeEmail(planCode?: string | null) {
+  if (planCode === "pro" || planCode === "founding") {
+    return;
+  }
+
+  try {
+    await fetch("/api/auth/welcome", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        planCode: planCode === "free" ? "free" : null,
+      }),
+    });
+  } catch {
+    // O fluxo principal nao deve depender do envio do template.
+  }
 }

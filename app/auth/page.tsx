@@ -8,6 +8,7 @@ import { usePlanIntent } from "@/store/plan-intent-store";
 import {
   buildGoogleCallbackUrl,
   getAuthErrorMessage,
+  normalizeCheckoutReturnUrl,
   normalizeAuthNextPath,
   parseAuthFlowTarget,
   parseAuthPlan,
@@ -67,6 +68,7 @@ export default function AuthPage() {
   const [queryPlan, setQueryPlan] = useState<BillingPlanCode | null>(null);
   const [target, setTarget] = useState<"workspace" | "download">("workspace");
   const [nextPath, setNextPath] = useState<string | null>(null);
+  const [checkoutReturnTo, setCheckoutReturnTo] = useState<string | null>(null);
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -99,6 +101,7 @@ export default function AuthPage() {
     setQueryPlan(parseAuthPlan(params.get("plan")));
     setTarget(parseAuthFlowTarget(params.get("target")));
     setNextPath(normalizeAuthNextPath(params.get("next")));
+    setCheckoutReturnTo(normalizeCheckoutReturnUrl(params.get("returnTo")));
     setErrorMsg(params.get("auth_error") ?? params.get("billing_error") ?? "");
   }, []);
 
@@ -141,6 +144,7 @@ export default function AuthPage() {
           return;
         }
 
+        await maybeSendWelcomeEmail(activePlan);
         clearIntent();
         enterWorkspace();
         return;
@@ -167,6 +171,7 @@ export default function AuthPage() {
           return;
         }
 
+        await maybeSendWelcomeEmail(activePlan);
         clearIntent();
         enterWorkspace();
         return;
@@ -206,7 +211,7 @@ export default function AuthPage() {
       supabase,
       planCode,
       accessToken ?? null,
-      buildBillingReturnUrl(),
+      buildBillingReturnUrl(checkoutReturnTo),
       "embedded",
     );
 
@@ -245,6 +250,7 @@ export default function AuthPage() {
             plan: activePlan,
             target,
             nextPath,
+            checkoutReturnTo,
             source: "page",
           }),
           queryParams: {
@@ -490,7 +496,11 @@ export default function AuthPage() {
   );
 }
 
-function buildBillingReturnUrl() {
+function buildBillingReturnUrl(checkoutReturnTo?: string | null) {
+  if (checkoutReturnTo) {
+    return checkoutReturnTo;
+  }
+
   return `${window.location.origin}/workspace/settings/billing`;
 }
 
@@ -512,4 +522,24 @@ async function persistPlanIntent(
     source: "web_auth",
     platformInterest: target === "download" ? "windows" : "web",
   });
+}
+
+async function maybeSendWelcomeEmail(planCode?: BillingPlanCode | null) {
+  if (planCode === "pro" || planCode === "founding") {
+    return;
+  }
+
+  try {
+    await fetch("/api/auth/welcome", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        planCode: planCode === "free" ? "free" : null,
+      }),
+    });
+  } catch {
+    // O login nao depende desse envio; a falha nao deve bloquear o fluxo.
+  }
 }
