@@ -1,6 +1,9 @@
 import type { SupportRequestInput } from "@/utils/support/shared";
 
 const CLICKUP_API_BASE_URL = "https://api.clickup.com/api/v2";
+const DEFAULT_CLICKUP_SUPPORT_LIST_ID = "901712375712";
+const DEFAULT_CLICKUP_SUPPORT_STATUS = "nao atendidos";
+const DEFAULT_CLICKUP_ASSIGNEE_ID = "290531825";
 
 export async function createSupportClickUpTask(options: {
   input: SupportRequestInput;
@@ -9,7 +12,14 @@ export async function createSupportClickUpTask(options: {
 }) {
   const apiToken = process.env.CLICKUP_API_TOKEN?.trim();
   const listId = normalizeClickUpId(
-    process.env.CLICKUP_SUPPORT_LIST_ID || process.env.CLICKUP_LIST_ID,
+    process.env.CLICKUP_SUPPORT_LIST_ID ||
+      process.env.CLICKUP_LIST_ID ||
+      DEFAULT_CLICKUP_SUPPORT_LIST_ID,
+  );
+  const defaultStatus =
+    process.env.CLICKUP_DEFAULT_STATUS?.trim() || DEFAULT_CLICKUP_SUPPORT_STATUS;
+  const assigneeId = normalizeClickUpId(
+    process.env.CLICKUP_ASSIGNEE_ID || DEFAULT_CLICKUP_ASSIGNEE_ID,
   );
 
   if (!apiToken || !listId) {
@@ -29,12 +39,8 @@ export async function createSupportClickUpTask(options: {
       name: buildTaskName(options.input, options.requestId),
       description: buildTaskDescription(options),
       tags: ["support", options.input.origin === "Landing Page" ? "landing" : "web"],
-      ...(process.env.CLICKUP_DEFAULT_STATUS?.trim()
-        ? { status: process.env.CLICKUP_DEFAULT_STATUS.trim() }
-        : {}),
-      ...(normalizeClickUpId(process.env.CLICKUP_ASSIGNEE_ID)
-        ? { assignees: [Number(normalizeClickUpId(process.env.CLICKUP_ASSIGNEE_ID))] }
-        : {}),
+      ...(defaultStatus ? { status: defaultStatus } : {}),
+      ...(assigneeId ? { assignees: [Number(assigneeId)] } : {}),
     }),
     cache: "no-store",
   });
