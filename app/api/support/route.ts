@@ -5,6 +5,7 @@ import {
 import { createRequestId, logServerEvent } from "@/utils/server/observability";
 import { checkRateLimit, getClientIp } from "@/utils/server/rate-limit";
 import { createClient } from "@/utils/supabase/server";
+import { createSupportClickUpTask } from "@/utils/server/clickup-support";
 import { sendSupportEmail } from "@/utils/server/support";
 import { sanitizeSupportInput, validateSupportInput } from "@/utils/support/shared";
 
@@ -86,6 +87,36 @@ export async function POST(request: Request) {
       request,
       userPlan: supportContext.userPlan,
     });
+    let clickUpMeta:
+      | {
+          created: true;
+          taskId: string | null;
+          taskUrl: string | null;
+        }
+      | {
+          created: false;
+          skippedReason: string;
+        }
+      | null = null;
+
+    try {
+      clickUpMeta = await createSupportClickUpTask({
+        input: resolvedInput,
+        userPlan: supportContext.userPlan,
+        requestId,
+      });
+    } catch (error) {
+      logServerEvent({
+        area: "support",
+        event: "clickup_task_failed",
+        level: "warn",
+        requestId,
+        metadata: {
+          origin: resolvedInput.origin,
+          message: error instanceof Error ? error.message : "unknown",
+        },
+      });
+    }
 
     logServerEvent({
       area: "support",
@@ -98,6 +129,8 @@ export async function POST(request: Request) {
         userPlan: supportContext.userPlan,
         browser: emailMeta.browser,
         operatingSystem: emailMeta.operatingSystem,
+        clickUpTaskId: clickUpMeta?.created ? clickUpMeta.taskId : null,
+        clickUpSkippedReason: clickUpMeta && !clickUpMeta.created ? clickUpMeta.skippedReason : null,
       },
     });
 
