@@ -22,6 +22,31 @@ export function normalizeAuthNextPath(value: string | null | undefined) {
   return value;
 }
 
+export function normalizeCheckoutReturnUrl(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    const url = new URL(value);
+    const configuredLandingOrigin = normalizeOrigin(process.env.NEXT_PUBLIC_CODETRAIL_LANDING_URL);
+    const isConfiguredLanding = configuredLandingOrigin ? url.origin === configuredLandingOrigin : false;
+    const isDefaultLanding =
+      url.origin === "https://www.codetrail.site" ||
+      url.origin === "https://www.codetrail.site/" ||
+      url.origin === "https://codetrail.site";
+    const isLocalLanding = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+
+    if (isConfiguredLanding || isDefaultLanding || isLocalLanding) {
+      return url.toString();
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
 export function buildPostAuthDestination(options: {
   plan: BillingPlanCode | null;
   target: AuthFlowTarget;
@@ -43,6 +68,7 @@ export function buildGoogleCallbackUrl(options: {
   plan: BillingPlanCode | null;
   target: AuthFlowTarget;
   nextPath?: string | null;
+  checkoutReturnTo?: string | null;
   source?: "page" | "modal";
 }) {
   const url = new URL("/auth/callback", options.origin);
@@ -59,6 +85,10 @@ export function buildGoogleCallbackUrl(options: {
     url.searchParams.set("next", options.nextPath);
   }
 
+  if (options.checkoutReturnTo) {
+    url.searchParams.set("returnTo", options.checkoutReturnTo);
+  }
+
   if (options.source) {
     url.searchParams.set("source", options.source);
   }
@@ -70,6 +100,7 @@ export function buildAuthErrorRedirect(options: {
   plan: BillingPlanCode | null;
   target: AuthFlowTarget;
   nextPath?: string | null;
+  checkoutReturnTo?: string | null;
   message: string;
 }) {
   const params = new URLSearchParams();
@@ -84,6 +115,10 @@ export function buildAuthErrorRedirect(options: {
 
   if (options.nextPath) {
     params.set("next", options.nextPath);
+  }
+
+  if (options.checkoutReturnTo) {
+    params.set("returnTo", options.checkoutReturnTo);
   }
 
   params.set("auth_error", options.message);
@@ -134,4 +169,16 @@ export function getAuthErrorMessage(error: Error | { message?: string } | unknow
     return "O login com Google ainda não está habilitado neste ambiente do CodeTrail.";
   }
   return "Falha de comunicação com os servidores. Verifique sua conexão e tente novamente.";
+}
+
+function normalizeOrigin(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
 }

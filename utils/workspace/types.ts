@@ -526,7 +526,7 @@ export interface WorkspaceContextValue {
     grade: "again" | "hard" | "good" | "easy",
   ) => Promise<void>;
   refreshBilling: () => Promise<void>;
-  createCheckout: (planCode: BillingPlanCode) => Promise<void>;
+  createCheckout: (planCode: BillingPlanCode, returnUrl?: string | null) => Promise<void>;
   openPortal: () => Promise<void>;
   cancelSubscription: () => Promise<void>;
   syncBilling: () => Promise<void>;

@@ -512,14 +512,14 @@ export function WorkspaceProvider({
     }
   }
 
-  async function handleCheckout(planCode: BillingPlanCode) {
+  async function handleCheckout(planCode: BillingPlanCode, returnUrl?: string | null) {
     try {
       await withOperation(billingCheckoutOperation(planCode), async () => {
         const response = await createCheckout(
           supabase,
           planCode,
           undefined,
-          `${window.location.origin}/workspace/settings/billing`,
+          returnUrl ?? `${window.location.origin}/workspace/settings/billing`,
           "embedded",
         );
 

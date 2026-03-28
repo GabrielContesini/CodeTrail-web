@@ -22,6 +22,7 @@ import {
   SectionGrid,
 } from "@/app/workspace/_components/workspace-ui";
 import { FeedbackMessage } from "@/app/components/ui/system-primitives";
+import { normalizeCheckoutReturnUrl } from "@/utils/auth/oauth";
 import {
   billingIntervalLabel,
   formatCurrencyBrl,
@@ -79,6 +80,7 @@ export function BillingPage() {
   );
   const latestPayment = billing.payments[0] ?? null;
   const searchKey = searchParams.toString();
+  const checkoutReturnTo = normalizeCheckoutReturnUrl(searchParams.get("returnTo"));
   const isRefreshingSnapshot = operation?.key === "billing-refresh";
   const isSyncingStatus = operation?.key === "billing-sync";
   const isOpeningPortal = operation?.key === "billing-portal";
@@ -200,7 +202,7 @@ export function BillingPage() {
         title: "Plano ja ativo",
         message: `O plano ${currentPlan?.name ?? resolvedCheckoutIntent.toUpperCase()} ja esta ativo nesta conta.`,
       });
-      clearTransientParams(router, pathname, searchParams, ["checkout"]);
+      clearTransientParams(router, pathname, searchParams, ["checkout", "returnTo"]);
       return;
     }
 
@@ -208,7 +210,7 @@ export function BillingPage() {
 
     async function handleCheckoutIntent() {
       try {
-        await createCheckout(resolvedCheckoutIntent);
+        await createCheckout(resolvedCheckoutIntent, checkoutReturnTo);
       } catch (nextError) {
         if (cancelled) {
           return;
@@ -224,7 +226,7 @@ export function BillingPage() {
         });
       } finally {
         if (!cancelled) {
-          clearTransientParams(router, pathname, searchParams, ["checkout"]);
+          clearTransientParams(router, pathname, searchParams, ["checkout", "returnTo"]);
         }
       }
     }
@@ -243,6 +245,7 @@ export function BillingPage() {
     router,
     searchKey,
     searchParams,
+    checkoutReturnTo,
   ]);
 
   async function handleRefreshSnapshot() {
