@@ -4,6 +4,9 @@ const CLICKUP_API_BASE_URL = "https://api.clickup.com/api/v2";
 const DEFAULT_CLICKUP_SUPPORT_LIST_ID = "901712375712";
 const DEFAULT_CLICKUP_SUPPORT_STATUS = "nao atendidos";
 const DEFAULT_CLICKUP_ASSIGNEE_ID = "290531825";
+const DEFAULT_CLICKUP_PRIORITY = 2;
+const DEFAULT_CLICKUP_TIME_ESTIMATE_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_CLICKUP_DUE_OFFSET_MS = 24 * 60 * 60 * 1000;
 
 export async function createSupportClickUpTask(options: {
   input: SupportRequestInput;
@@ -21,6 +24,8 @@ export async function createSupportClickUpTask(options: {
   const assigneeId = normalizeClickUpId(
     process.env.CLICKUP_ASSIGNEE_ID || DEFAULT_CLICKUP_ASSIGNEE_ID,
   );
+  const startDate = Date.now();
+  const dueDate = startDate + DEFAULT_CLICKUP_DUE_OFFSET_MS;
 
   if (!apiToken || !listId) {
     return {
@@ -39,6 +44,12 @@ export async function createSupportClickUpTask(options: {
       name: buildTaskName(options.input, options.requestId),
       description: buildTaskDescription(options),
       tags: ["support", options.input.origin === "Landing Page" ? "landing" : "web"],
+      priority: DEFAULT_CLICKUP_PRIORITY,
+      start_date: startDate,
+      start_date_time: true,
+      due_date: dueDate,
+      due_date_time: true,
+      time_estimate: DEFAULT_CLICKUP_TIME_ESTIMATE_MS,
       ...(defaultStatus ? { status: defaultStatus } : {}),
       ...(assigneeId ? { assignees: [Number(assigneeId)] } : {}),
     }),
