@@ -4,7 +4,6 @@ const SUPPORT_DESTINATION = "suporte.codetrail@gmail.com";
 const SUPPORT_TEMPLATE_ID =
   process.env.RESEND_SUPPORT_TEMPLATE_ID || "new-support-contact";
 const DEFAULT_FROM = "CodeTrail Suporte <onboarding@resend.dev>";
-const SUPPORT_TEMPLATE_SUBJECT = "Novo Suporte solicitado ⚠️";
 const TEMPLATE_VALUE_LIMIT = 2000;
 
 export async function sendSupportEmail(options: {
@@ -33,7 +32,7 @@ export async function sendSupportEmail(options: {
       from: process.env.RESEND_FROM_EMAIL || DEFAULT_FROM,
       to: [SUPPORT_DESTINATION],
       reply_to: options.input.email,
-      subject: SUPPORT_TEMPLATE_SUBJECT,
+      subject: buildSupportSubject(options.input),
       template: {
         id: SUPPORT_TEMPLATE_ID,
         variables: {
@@ -70,6 +69,10 @@ export async function sendSupportEmail(options: {
     browser,
     operatingSystem,
   };
+}
+
+function buildSupportSubject(input: SupportRequestInput) {
+  return `[CodeTrail Suporte • ${input.origin}] ${input.subject}`;
 }
 
 function buildSupportMessage(
