@@ -2,7 +2,7 @@ export const SUPPORT_LIMITS = {
   name: 80,
   email: 160,
   subject: 120,
-  description: 3000,
+  description: 1600,
   pageUrl: 600,
 } as const;
 

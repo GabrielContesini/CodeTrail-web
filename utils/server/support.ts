@@ -5,6 +5,7 @@ const SUPPORT_TEMPLATE_ID =
   process.env.RESEND_SUPPORT_TEMPLATE_ID || "new-support-contact";
 const DEFAULT_FROM = "CodeTrail Suporte <onboarding@resend.dev>";
 const SUPPORT_TEMPLATE_SUBJECT = "Novo Suporte solicitado ⚠️";
+const TEMPLATE_VALUE_LIMIT = 2000;
 
 export async function sendSupportEmail(options: {
   input: SupportRequestInput;
@@ -79,18 +80,24 @@ function buildSupportMessage(
     userAgent: string;
   },
 ) {
-  return [
+  const message = [
     `Origem: ${options.origin}`,
     `Autenticado: ${options.authenticated ? "Sim" : "Não"}`,
     `Data/Hora: ${options.sentAt}`,
     `Página atual: ${options.pageUrl || "Não informada"}`,
     `Navegador: ${options.browser}`,
     `Sistema operacional: ${options.operatingSystem}`,
-    `User agent: ${options.userAgent}`,
     "",
     "Descrição do problema:",
     options.description,
   ].join("\n");
+
+  if (message.length <= TEMPLATE_VALUE_LIMIT) {
+    return message;
+  }
+
+  const suffix = "\n\n[Mensagem truncada para respeitar o limite do template do Resend.]";
+  return `${message.slice(0, TEMPLATE_VALUE_LIMIT - suffix.length).trimEnd()}${suffix}`;
 }
 
 function detectOperatingSystem(userAgent: string) {
