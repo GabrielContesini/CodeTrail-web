@@ -50,8 +50,29 @@ export function FlashcardsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(
     data!.flashcards[0]?.id ?? null,
   );
-  const [revealedId, setRevealedId] = useState<string | null>(null);
-  const isRevealed = revealedId === selectedId && selectedId !== null;
+  const [revealedCards, setRevealedCards] = useState<Record<string, boolean>>({});
+
+  const isRevealed = !!revealedCards[selectedId ?? ""] && selectedId !== null;
+
+  const revealCard = (id: string) => {
+    setRevealedCards((prev) => ({ ...prev, [id]: true }));
+  };
+
+  const hideRevealed = () => {
+    setRevealedCards((prev) => {
+      const next = { ...prev };
+      delete next[selectedId ?? ""];
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    setRevealedCards((prev) => {
+      const next = { ...prev };
+      delete next[selectedId ?? ""];
+      return next;
+    });
+  }, [selectedId]);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
 
   useEffect(() => {
@@ -60,10 +81,6 @@ export function FlashcardsPage() {
     }, 60000);
     return () => clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    setRevealedId(null);
-  }, [selectedId]);
 
   const selected =
     data!.flashcards.find((item) => item.id === selectedId) ??
@@ -133,7 +150,7 @@ export function FlashcardsPage() {
     if (!selected) return;
     const currentSelectedId = selectedId;
     await reviewFlashcard(selected, quality);
-    setRevealedId(null);
+    hideRevealed();
 
     // Automatically select next due card if available
     const nextDue = dueNow.find((c) => c.id !== currentSelectedId);
@@ -276,7 +293,7 @@ export function FlashcardsPage() {
                 {!isRevealed && (
                   <div className="flex justify-center pt-8 border-t border-outline-variant/10 relative z-10">
                     <button
-                      onClick={() => setRevealedId(selectedId)}
+                      onClick={() => selectedId && revealCard(selectedId)}
                       className="text-on-surface-variant hover:text-primary flex items-center gap-2 text-sm font-bold tracking-wider transition-all group/reveal"
                     >
                       <RefreshCw
