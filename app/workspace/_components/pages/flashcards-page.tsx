@@ -50,7 +50,8 @@ export function FlashcardsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(
     data!.flashcards[0]?.id ?? null,
   );
-  const [isRevealed, setIsRevealed] = useState(false);
+  const [revealedId, setRevealedId] = useState<string | null>(null);
+  const isRevealed = revealedId === selectedId && selectedId !== null;
   const [currentTime, setCurrentTime] = useState(() => Date.now());
 
   useEffect(() => {
@@ -61,7 +62,7 @@ export function FlashcardsPage() {
   }, []);
 
   useEffect(() => {
-    setIsRevealed(false);
+    setRevealedId(null);
   }, [selectedId]);
 
   const selected =
@@ -132,7 +133,7 @@ export function FlashcardsPage() {
     if (!selected) return;
     const currentSelectedId = selectedId;
     await reviewFlashcard(selected, quality);
-    setIsRevealed(false);
+    setRevealedId(null);
 
     // Automatically select next due card if available
     const nextDue = dueNow.find((c) => c.id !== currentSelectedId);
@@ -275,7 +276,7 @@ export function FlashcardsPage() {
                 {!isRevealed && (
                   <div className="flex justify-center pt-8 border-t border-outline-variant/10 relative z-10">
                     <button
-                      onClick={() => setIsRevealed(true)}
+                      onClick={() => setRevealedId(selectedId)}
                       className="text-on-surface-variant hover:text-primary flex items-center gap-2 text-sm font-bold tracking-wider transition-all group/reveal"
                     >
                       <RefreshCw
