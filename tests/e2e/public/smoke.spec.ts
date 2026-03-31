@@ -13,7 +13,7 @@ test.describe("public smoke", () => {
     await page.goto("/");
 
     await expect(page).toHaveURL(/\/auth$/);
-    await expect(page.getByRole("heading", { name: "Acesse sua conta" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Acesso ao Workspace" })).toBeVisible();
     await expect(page.getByText("CodeTrail").first()).toBeVisible();
 
     clientErrors.expectNoCriticalErrors();
@@ -24,9 +24,9 @@ test.describe("public smoke", () => {
 
     await page.goto("/auth?plan=pro");
 
-    await page.getByTestId("google-auth-button").scrollIntoViewIfNeeded();
-    await expect(page.getByTestId("google-auth-button")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Entrar no sistema" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Criar conta" })).toBeVisible();
+    await page.getByRole("button", { name: /Continuar com Google/i }).scrollIntoViewIfNeeded();
+    await expect(page.getByRole("button", { name: /Continuar com Google/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Autorizar Acesso" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Cadastre-se" })).toBeVisible();
   });
 });

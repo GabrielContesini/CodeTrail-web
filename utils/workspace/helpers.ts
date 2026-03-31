@@ -24,7 +24,13 @@ import type {
   StudyTrackRow,
   TaskRow,
   TrackBlueprint,
+  TrackJourneyStatus,
+  TrackTimelineDetail,
+  TrackTimelineStep,
+  TrackTimelineStepStatus,
   UserSkillProgressRow,
+  UserTrackModuleProgressRow,
+  UserTrackProgressRow,
   WorkspaceData,
   WorkspaceFeatureAccess,
   WorkspaceSectionKey,
@@ -58,7 +64,7 @@ const BILLING_FEATURE_KEYS = {
 
 export const navigationItems: NavigationItem[] = [
   {
-    label: "Dashboard",
+    label: "Painel",
     section: "dashboard",
     href: "/workspace/dashboard",
     icon: "dashboard",
@@ -106,13 +112,13 @@ export const navigationItems: NavigationItem[] = [
     icon: "cards",
   },
   {
-    label: "Mind Maps",
+    label: "Mapas Mentais",
     section: "mind-maps",
     href: "/workspace/mind-maps",
     icon: "mindmap",
   },
   {
-    label: "Analytics",
+    label: "Análises",
     section: "analytics",
     href: "/workspace/analytics",
     icon: "analytics",
@@ -127,7 +133,7 @@ export const navigationItems: NavigationItem[] = [
 
 export const routeMetaBySection: Record<WorkspaceSectionKey, RouteMeta> = {
   dashboard: {
-    title: "Dashboard",
+    title: "Painel",
     subtitle:
       "Resumo executivo do estudo, da execução e das próximas ações.",
   },
@@ -160,11 +166,11 @@ export const routeMetaBySection: Record<WorkspaceSectionKey, RouteMeta> = {
     subtitle: "Revisão ativa com decks, fila do dia e repetição espaçada.",
   },
   "mind-maps": {
-    title: "Mind Maps",
+    title: "Mapas Mentais",
     subtitle: "Canvas visual para conectar conceitos, módulos e projetos.",
   },
   analytics: {
-    title: "Analytics",
+    title: "Análises",
     subtitle: "Consistência, volume e evolução da trilha em números.",
   },
   settings: {
@@ -180,7 +186,7 @@ export const routeMetaBySection: Record<WorkspaceSectionKey, RouteMeta> = {
 export function resolveSection(slug: string[] | undefined): WorkspaceSectionKey {
   const path = (slug ?? []).join("/");
   if (!path || path === "dashboard") return "dashboard";
-  if (path === "tracks") return "tracks";
+  if (path === "tracks" || path.startsWith("tracks/")) return "tracks";
   if (path === "sessions") return "sessions";
   if (path === "tasks") return "tasks";
   if (path === "reviews") return "reviews";
@@ -415,7 +421,7 @@ export function emptyBillingSnapshot(): BillingSnapshot {
     current_plan: {
       id: "free",
       code: "free",
-      name: "Free",
+      name: "Gratuito",
       description: "Acesso básico ao produto.",
       price_cents: 0,
       currency: "BRL",
@@ -423,7 +429,7 @@ export function emptyBillingSnapshot(): BillingSnapshot {
       is_active: true,
       is_public: true,
       trial_days: 0,
-      metadata: { badge: "Free" },
+      metadata: { badge: "Gratuito" },
       features: [
         { feature_key: BILLING_FEATURE_KEYS.notes, enabled: true, limit_value: null },
         {
@@ -535,6 +541,8 @@ export function buildTrackBlueprints(
   skills: StudySkillRow[],
   modules: StudyModuleRow[],
   progress: UserSkillProgressRow[],
+  trackStates?: UserTrackProgressRow[],
+  trackModuleStates?: UserTrackModuleProgressRow[],
 ) {
   return tracks.map<TrackBlueprint>((track) => {
     const trackSkills = skills
@@ -551,13 +559,30 @@ export function buildTrackBlueprints(
     const totalProgress = trackSkills.reduce((sum, skill) => {
       return sum + (progressBySkill[skill.id]?.progress_percent ?? 0);
     }, 0);
+    
+    const trackState = trackStates?.find(s => s.track_id === track.id) ?? null;
+    const isCompleted = trackState?.status === "completed" || 
+      (trackModules.length > 0 && trackModules.every(m => {
+        const moduleState = trackModuleStates?.find(s => s.module_id === m.id && s.track_id === track.id);
+        return moduleState?.status === "completed";
+      }));
+
+    const completedSteps = trackModules.filter(m => {
+      const moduleState = trackModuleStates?.find(s => s.module_id === m.id && s.track_id === track.id);
+      return moduleState?.status === "completed";
+    }).length;
+
+    const progressPercent = trackModules.length > 0 
+      ? (completedSteps / trackModules.length) * 100 
+      : (trackSkills.length ? totalProgress / trackSkills.length : 0);
 
     return {
       track,
       skills: trackSkills,
       modules: trackModules,
       progressBySkill,
-      progressPercent: trackSkills.length ? totalProgress / trackSkills.length : 0,
+      progressPercent,
+      isCompleted,
     };
   });
 }
@@ -738,6 +763,8 @@ export function composeWorkspaceData(args: {
   skills: WorkspaceData["skills"];
   progress: WorkspaceData["progress"];
   modules: WorkspaceData["modules"];
+  trackStates: WorkspaceData["trackStates"];
+  trackModuleStates: WorkspaceData["trackModuleStates"];
   sessions: WorkspaceData["sessions"];
   tasks: WorkspaceData["tasks"];
   reviews: WorkspaceData["reviews"];
@@ -746,6 +773,7 @@ export function composeWorkspaceData(args: {
   notes: WorkspaceData["notes"];
   flashcards: WorkspaceData["flashcards"];
   mindMaps: WorkspaceData["mindMaps"];
+  notifications: WorkspaceData["notifications"];
   settings: WorkspaceData["settings"];
   billing: WorkspaceData["billing"];
 }): WorkspaceData {
@@ -754,6 +782,8 @@ export function composeWorkspaceData(args: {
     args.skills,
     args.modules,
     args.progress,
+    args.trackStates,
+    args.trackModuleStates,
   );
   const projectBundles = buildProjectBundles(args.projects, args.projectSteps);
 
@@ -762,6 +792,7 @@ export function composeWorkspaceData(args: {
     billing: args.billing ?? emptyBillingSnapshot(),
     trackBlueprints,
     projectBundles,
+    notifications: args.notifications ?? [],
     dashboardSummary: buildDashboardSummary(
       args.sessions,
       args.tasks,
@@ -776,6 +807,122 @@ export function composeWorkspaceData(args: {
       projectBundles,
     ),
     featureAccess: featureAccess(args.billing),
+  };
+}
+
+export function buildTrackTimelineDetail(args: {
+  data: WorkspaceData;
+  trackId: string;
+}): TrackTimelineDetail | null {
+  const blueprint = args.data.trackBlueprints.find((item) => item.track.id === args.trackId);
+  if (!blueprint) {
+    return null;
+  }
+
+  const trackState =
+    args.data.trackStates.find((item) => item.track_id === args.trackId) ?? null;
+  const moduleStates = args.data.trackModuleStates.filter((item) => item.track_id === args.trackId);
+  const completedSteps = moduleStates.filter((item) => item.status === "completed").length;
+  const totalSteps = blueprint.modules.length;
+  const firstPendingIndex = totalSteps ? Math.min(completedSteps, totalSteps - 1) : 0;
+  const timelineStatus = resolveTrackJourneyStatus(trackState, completedSteps, totalSteps);
+  const currentModuleId =
+    trackState?.current_module_id ??
+    moduleStates.find((item) => item.status === "in_progress" || item.status === "paused")?.module_id ??
+    blueprint.modules[firstPendingIndex]?.id ??
+    null;
+  const progressPercent =
+    trackState?.progress_percent ??
+    (totalSteps ? (completedSteps / totalSteps) * 100 : blueprint.progressPercent);
+  const skillGroups = groupTrackSkillsByModule(blueprint.skills, blueprint.modules.length);
+
+  const steps = blueprint.modules.map<TrackTimelineStep>((module, index) => {
+    const moduleState = moduleStates.find((item) => item.module_id === module.id) ?? null;
+    const isCompleted = timelineStatus === "completed" || moduleState?.status === "completed";
+    const isCurrent = currentModuleId === module.id;
+    const isAccessible =
+      timelineStatus === "completed" ||
+      isCompleted ||
+      index <= firstPendingIndex;
+    const status = resolveTrackStepStatus({
+      moduleState,
+      timelineStatus,
+      isCompleted,
+      isCurrent,
+      isAccessible,
+    });
+    const relatedSkills = skillGroups[index] ?? [];
+    const skillProgress =
+      relatedSkills.length
+        ? relatedSkills.reduce((sum, skill) => {
+          return sum + (blueprint.progressBySkill[skill.id]?.progress_percent ?? 0);
+        }, 0) / relatedSkills.length
+        : 0;
+    const fallbackProgress: Record<TrackTimelineStepStatus, number> = {
+      not_started: 0,
+      blocked: 0,
+      paused: 48,
+      in_progress: 62,
+      completed: 100,
+    };
+    const relatedTasks = args.data.tasks
+      .filter((task) => task.module_id === module.id || task.track_id === args.trackId)
+      .sort((left, right) => {
+        return new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime();
+      })
+      .slice(0, 4);
+
+    return {
+      id: module.id,
+      order: index + 1,
+      title: module.title,
+      description: module.summary,
+      status,
+      estimatedHours: module.estimated_hours,
+      estimatedLabel: module.estimated_hours ? `${module.estimated_hours}h estimadas` : "Sem estimativa",
+      progressPercent:
+        status === "completed"
+          ? 100
+          : Math.max(fallbackProgress[status], Math.min(skillProgress, 96)),
+      isAccessible,
+      isCurrent: status === "in_progress" || status === "paused",
+      startedAt: moduleState?.started_at ?? null,
+      pausedAt: moduleState?.paused_at ?? null,
+      completedAt: moduleState?.completed_at ?? null,
+      contentItems: [
+        ...relatedSkills.map((skill) => `${skill.name} · alvo ${labelForSkillLevel(skill.target_level)}`),
+        module.is_core ? "Modulo core da trilha" : "Modulo complementar da trilha",
+      ].slice(0, 4),
+      tasks: relatedTasks,
+      observations: buildTrackStepObservations({
+        data: args.data,
+        trackId: args.trackId,
+        moduleId: module.id,
+        stepStatus: status,
+        estimatedHours: module.estimated_hours,
+      }),
+    };
+  });
+
+  return {
+    track: blueprint.track,
+    blueprint,
+    state: trackState,
+    status: timelineStatus,
+    progressPercent,
+    currentStepId: currentModuleId,
+    startedAt: trackState?.started_at ?? null,
+    pausedAt: trackState?.paused_at ?? null,
+    completedAt: trackState?.completed_at ?? null,
+    completedSteps,
+    stepCount: totalSteps,
+    unlockedSteps: totalSteps ? Math.min(totalSteps, completedSteps + 1) : 0,
+    selectedSuggestedStepId:
+      steps.find((step) => step.status === "in_progress" || step.status === "paused")?.id ??
+      steps.find((step) => step.isAccessible)?.id ??
+      steps[0]?.id ??
+      null,
+    steps,
   };
 }
 
@@ -959,25 +1106,42 @@ export function decodeMindMap(raw: string | null | undefined, fallbackLabel = "T
   }
 }
 
+const MIND_MAP_MAX_DIMENSION = 500;
+const MIND_MAP_MIN_DIMENSION = 50;
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
 function decodeMindMapNode(item: Record<string, unknown>) {
   const shapeName = String(item.shape ?? "rounded");
   const shape: MindMapNodeShape =
     shapeName === "rectangle" ||
-    shapeName === "rounded" ||
-    shapeName === "ellipse" ||
-    shapeName === "diamond"
+      shapeName === "rounded" ||
+      shapeName === "ellipse" ||
+      shapeName === "diamond"
       ? shapeName
       : "rounded";
+  const rawWidth = Number(item.width ?? 220);
+  const rawHeight = Number(item.height ?? 116);
+  const rawX = Number(item.x ?? 320);
+  const rawY = Number(item.y ?? 260);
   return {
     id: String(item.id ?? ""),
-    label: String(item.label ?? "Novo conceito"),
+    label: String(item.label ?? "Novo conceito").slice(0, 200),
     shape,
-    colorHex: String(item.color_hex ?? "#2EC5FF"),
-    x: Number(item.x ?? 320),
-    y: Number(item.y ?? 260),
-    width: Number(item.width ?? 220),
-    height: Number(item.height ?? 116),
+    colorHex: isValidHexColor(item.color_hex) ? String(item.color_hex) : "#2EC5FF",
+    x: clamp(rawX, 0, 2200 - MIND_MAP_MIN_DIMENSION),
+    y: clamp(rawY, 0, 1400 - MIND_MAP_MIN_DIMENSION),
+    width: clamp(rawWidth, MIND_MAP_MIN_DIMENSION, MIND_MAP_MAX_DIMENSION),
+    height: clamp(rawHeight, MIND_MAP_MIN_DIMENSION, MIND_MAP_MAX_DIMENSION),
   };
+}
+
+function isValidHexColor(value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  const hex = value.replace("#", "");
+  return /^[0-9A-Fa-f]{6}$/.test(hex);
 }
 
 function decodeMindMapConnection(item: Record<string, unknown>) {
@@ -1100,4 +1264,91 @@ export function uniqueFolders(rows: Array<{ folder_name: string }>) {
 
 export function uniqueDecks(rows: Array<{ deck_name: string }>) {
   return ["Todas", ...new Set(["Geral", ...rows.map((item) => normalizedDeckName(item.deck_name))])];
+}
+
+function resolveTrackJourneyStatus(
+  state: UserTrackProgressRow | null,
+  completedSteps: number,
+  totalSteps: number,
+): TrackJourneyStatus {
+  if (totalSteps > 0 && completedSteps >= totalSteps) {
+    return "completed";
+  }
+
+  return state?.status ?? "not_started";
+}
+
+function resolveTrackStepStatus(args: {
+  moduleState: UserTrackModuleProgressRow | null;
+  timelineStatus: TrackJourneyStatus;
+  isCompleted: boolean;
+  isCurrent: boolean;
+  isAccessible: boolean;
+}): TrackTimelineStepStatus {
+  if (args.isCompleted) {
+    return "completed";
+  }
+
+  if (!args.isAccessible) {
+    return "blocked";
+  }
+
+  if (args.moduleState?.status === "paused" || (args.timelineStatus === "paused" && args.isCurrent)) {
+    return "paused";
+  }
+
+  if (args.moduleState?.status === "in_progress" || (args.timelineStatus === "in_progress" && args.isCurrent)) {
+    return "in_progress";
+  }
+
+  return "not_started";
+}
+
+function groupTrackSkillsByModule(skills: StudySkillRow[], groupCount: number) {
+  if (!groupCount) {
+    return [];
+  }
+
+  const groups = Array.from({ length: groupCount }, () => [] as StudySkillRow[]);
+  skills.forEach((skill, index) => {
+    const ratio = skills.length ? index / skills.length : 0;
+    const targetGroup = Math.min(groupCount - 1, Math.floor(ratio * groupCount));
+    groups[targetGroup].push(skill);
+  });
+  return groups;
+}
+
+function buildTrackStepObservations(args: {
+  data: WorkspaceData;
+  trackId: string;
+  moduleId: string;
+  stepStatus: TrackTimelineStepStatus;
+  estimatedHours: number;
+}) {
+  const sessionsForStep = args.data.sessions.filter((item) => item.module_id === args.moduleId);
+  const pendingTasks = args.data.tasks.filter((item) => {
+    return item.module_id === args.moduleId && item.status !== "completed";
+  }).length;
+  const linkedProjects = args.data.projects.filter((item) => item.track_id === args.trackId).length;
+
+  const observations = [
+    pendingTasks
+      ? `${pendingTasks} tarefa(s) ainda em aberto nesta etapa.`
+      : "Nenhuma tarefa aberta vinculada a esta etapa.",
+    sessionsForStep.length
+      ? `${sessionsForStep.length} sessao(oes) ja registradas neste modulo.`
+      : "Nenhuma sessao registrada para este modulo ainda.",
+    linkedProjects
+      ? `${linkedProjects} projeto(s) ativos usam o contexto desta trilha.`
+      : "Conecte projetos desta trilha para criar entrega pratica em paralelo.",
+    args.estimatedHours
+      ? `Janela sugerida de ${args.estimatedHours}h para concluir este bloco.`
+      : "Ajuste a estimativa desta etapa conforme o seu ritmo real.",
+  ];
+
+  if (args.stepStatus === "blocked") {
+    observations.unshift("Finalize a etapa anterior para liberar este bloco.");
+  }
+
+  return observations.slice(0, 4);
 }

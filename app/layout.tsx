@@ -1,30 +1,19 @@
+import { SupportWidget } from "@/app/components/support/support-widget";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
-import { JetBrains_Mono, Manrope, Space_Grotesk } from "next/font/google";
-import { CustomCursor } from "@/app/components/custom-cursor";
-import { SupportWidget } from "@/app/components/support/support-widget";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-const displayFont = Space_Grotesk({
-  variable: "--font-display",
-  subsets: ["latin"],
-});
-
-const bodyFont = JetBrains_Mono({
-  variable: "--font-sans",
-  subsets: ["latin"],
-});
-
-const uiFont = Manrope({
-  variable: "--font-ui",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
   title: "CodeTrail | Sistema de estudo para carreiras em tecnologia",
   description:
-    "Planejamento de estudos em tecnologia com trilhas, sessoes, revisoes, projetos e uma versao Windows pronta para download.",
+    "Planejamento de estudos em tecnologia com trilhas, sessoes, revisoes, projetos e um workspace web premium para executar sua rotina.",
   icons: {
     icon: [
       { url: "/favicon.ico" },
@@ -43,10 +32,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body className={`${displayFont.variable} ${bodyFont.variable} ${uiFont.variable}`}>
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+          rel="stylesheet"
+        />
+      </head>
+      <body className={inter.variable}>
         {children}
         <SupportWidget origin="Web App" prefillAuthenticatedUser />
-        <CustomCursor />
         <Analytics />
         <SpeedInsights />
       </body>

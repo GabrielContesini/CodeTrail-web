@@ -13,6 +13,7 @@ import type {
   BillingCheckoutUiMode,
   FlashcardRow,
   MindMapRow,
+  NotificationRow,
   ProfileRow,
   ProjectRow,
   ProjectStepRow,
@@ -25,6 +26,8 @@ import type {
   TaskRow,
   UserGoalRow,
   UserSkillProgressRow,
+  UserTrackModuleProgressRow,
+  UserTrackProgressRow,
   WorkspaceLoadResult,
 } from "@/utils/workspace/types";
 
@@ -35,7 +38,8 @@ type DeletableWorkspaceEntity =
   | "projects"
   | "study_notes"
   | "flashcards"
-  | "mind_maps";
+  | "mind_maps"
+  | "notifications";
 
 interface UpsertableWorkspaceRowMap {
   profiles: ProfileRow;
@@ -48,6 +52,7 @@ interface UpsertableWorkspaceRowMap {
   study_notes: StudyNoteRow;
   flashcards: FlashcardRow;
   mind_maps: MindMapRow;
+  notifications: NotificationRow;
 }
 
 export async function loadWorkspaceData(
@@ -68,6 +73,8 @@ export async function loadWorkspaceData(
     skills,
     progress,
     modules,
+    trackStates,
+    trackModuleStates,
     sessions,
     tasks,
     reviews,
@@ -76,6 +83,7 @@ export async function loadWorkspaceData(
     settings,
     flashcards,
     mindMaps,
+    notifications,
   ] = await Promise.all([
     maybeSingle<ProfileRow>(
       supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
@@ -116,6 +124,24 @@ export async function loadWorkspaceData(
       supabase.from("study_modules").select("*").order("sort_order"),
       errors,
       "study_modules",
+    ),
+    listRows<UserTrackProgressRow>(
+      supabase
+        .from("user_track_progress")
+        .select("*")
+        .eq("user_id", userId)
+        .order("updated_at", { ascending: false }),
+      errors,
+      "user_track_progress",
+    ),
+    listRows<UserTrackModuleProgressRow>(
+      supabase
+        .from("user_track_module_progress")
+        .select("*")
+        .eq("user_id", userId)
+        .order("updated_at", { ascending: false }),
+      errors,
+      "user_track_module_progress",
     ),
     listRows<StudySessionRow>(
       supabase
@@ -190,6 +216,16 @@ export async function loadWorkspaceData(
           "mind_maps",
         )
       : Promise.resolve([]),
+    listRows<NotificationRow>(
+      supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(50),
+      errors,
+      "notifications",
+    ),
   ]);
   const projectIds = projects.map((project) => project.id);
   const projectSteps = projectIds.length
@@ -212,6 +248,8 @@ export async function loadWorkspaceData(
       skills,
       progress,
       modules,
+      trackStates,
+      trackModuleStates,
       sessions,
       tasks,
       reviews,
@@ -220,6 +258,7 @@ export async function loadWorkspaceData(
       notes,
       flashcards,
       mindMaps,
+      notifications,
       settings: settings ?? buildDefaultSettings(userId),
       billing,
     }),
@@ -480,6 +519,59 @@ export async function saveProjectStepWithProgress(
   }
 }
 
+export async function startTrackJourney(supabase: SupabaseClient, trackId: string) {
+  const { error } = await supabase.rpc("start_track_timeline", {
+    target_track_id: trackId,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function pauseTrackJourney(supabase: SupabaseClient, trackId: string) {
+  const { error } = await supabase.rpc("pause_track_timeline", {
+    target_track_id: trackId,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function resumeTrackJourney(supabase: SupabaseClient, trackId: string) {
+  const { error } = await supabase.rpc("resume_track_timeline", {
+    target_track_id: trackId,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function completeTrackTimelineStep(
+  supabase: SupabaseClient,
+  trackId: string,
+) {
+  const { error } = await supabase.rpc("complete_track_timeline_step", {
+    target_track_id: trackId,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function completeTrackJourney(supabase: SupabaseClient, trackId: string) {
+  const { error } = await supabase.rpc("complete_track_timeline", {
+    target_track_id: trackId,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
 export async function deleteProjectStepWithProgress(
   supabase: SupabaseClient,
   stepId: string,
@@ -515,6 +607,45 @@ export async function saveMindMapRow(supabase: SupabaseClient, payload: MindMapR
 
 export async function deleteMindMapRow(supabase: SupabaseClient, id: string) {
   await deleteWorkspaceRow(supabase, "mind_maps", id);
+}
+
+export async function saveNotificationRow(supabase: SupabaseClient, payload: NotificationRow) {
+  await upsertWorkspaceRow(supabase, "notifications", payload);
+}
+
+export async function markNotificationAsRead(supabase: SupabaseClient, notificationId: string) {
+  await supabase
+    .from("notifications")
+    .update({ is_read: true, read_at: new Date().toISOString() })
+    .eq("id", notificationId);
+}
+
+export async function markAllNotificationsAsRead(supabase: SupabaseClient, userId: string) {
+  await supabase
+    .from("notifications")
+    .update({ is_read: true, read_at: new Date().toISOString() })
+    .eq("user_id", userId)
+    .eq("is_read", false);
+}
+
+export async function deleteNotificationRow(supabase: SupabaseClient, id: string) {
+  await deleteWorkspaceRow(supabase, "notifications", id);
+}
+
+export async function createNotification(
+  supabase: SupabaseClient,
+  userId: string,
+  notification: Omit<NotificationRow, "id" | "user_id" | "created_at" | "is_read" | "read_at">
+) {
+  const payload: NotificationRow = {
+    id: crypto.randomUUID(),
+    user_id: userId,
+    ...notification,
+    is_read: false,
+    read_at: null,
+    created_at: new Date().toISOString(),
+  };
+  await saveNotificationRow(supabase, payload);
 }
 
 async function fetchBillingStatus(planCode: BillingPlanCode, sync = false) {

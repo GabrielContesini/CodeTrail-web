@@ -1,45 +1,19 @@
 "use client";
 
-import {
-  memo,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-  type PointerEvent as ReactPointerEvent,
-  type WheelEvent as ReactWheelEvent,
-} from "react";
-import {
-  ChevronLeft,
-  FolderOpen,
-  Link2,
-  Maximize2,
-  Move,
-  Pencil,
-  Plus,
-  RotateCcw,
-  Save,
-  Trash2,
-  Waypoints,
-} from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { LockedFeaturePage } from "@/app/workspace/_components/pages/shared";
 import { useWorkspace } from "@/app/workspace/_components/workspace-provider";
 import {
   DataCard,
   EmptyState,
   Field,
   GhostButton,
-  PageFrame,
   Pill,
   PrimaryButton,
   SecondaryButton,
   Select,
   TextInput,
-  WorkspaceModal,
+  WorkspaceModal
 } from "@/app/workspace/_components/workspace-ui";
-import { LockedFeaturePage } from "@/app/workspace/_components/pages/shared";
 import {
   colorFromHex,
   decodeMindMap,
@@ -56,11 +30,38 @@ import type {
   ProjectBundle,
   TrackBlueprint,
 } from "@/utils/workspace/types";
+import {
+  ChevronLeft,
+  FolderOpen,
+  Link2,
+  Maximize2,
+  Move,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Save,
+  Trash2,
+  Waypoints,
+} from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+  type WheelEvent as ReactWheelEvent,
+} from "react";
 
 const BOARD_WIDTH = 2200;
 const BOARD_HEIGHT = 1400;
 const MIN_SCALE = 0.45;
 const MAX_SCALE = 2.4;
+const MAX_NODES = 500;
+const MAX_CONNECTIONS = 1000;
 const DEFAULT_VIEW_STATE: ViewState = {
   scale: 1,
   offsetX: 80,
@@ -196,8 +197,8 @@ export function MindMapsEditorPage() {
   const connectionSourceIdRef = useRef<string | null>(connectionSourceId);
   const persistDocumentRef = useRef<
     (nextDraft?: MindMapDocument | null, successMessage?: string) => Promise<void>
-  >(async () => {});
-  const handleNodeActivationRef = useRef<(nodeId: string) => Promise<void>>(async () => {});
+  >(async () => { });
+  const handleNodeActivationRef = useRef<(nodeId: string) => Promise<void>>(async () => { });
   const pendingViewStateRef = useRef<ViewState | null>(null);
   const viewFrameRef = useRef<number | null>(null);
   const pendingDraftCommitRef = useRef<ScheduledDraftCommit | null>(null);
@@ -235,9 +236,9 @@ export function MindMapsEditorPage() {
       ? data!.mindMaps.find((item) => item.id === editorMapId) ?? null
       : null
     : data!.mindMaps.find((item) => item.id === selectedId) ??
-      filteredMaps[0] ??
-      data!.mindMaps[0] ??
-      null;
+    filteredMaps[0] ??
+    data!.mindMaps[0] ??
+    null;
   const draft =
     draftState.mapId === selected?.id
       ? draftState.document
@@ -253,8 +254,8 @@ export function MindMapsEditorPage() {
   const selectedConnections =
     selectedNode && draft
       ? draft.connections.filter(
-          (item) => item.sourceId === selectedNode.id || item.targetId === selectedNode.id,
-        )
+        (item) => item.sourceId === selectedNode.id || item.targetId === selectedNode.id,
+      )
       : [];
   const selectedLabels = selected
     ? mindMapContextLabels(selected, data!.trackBlueprints, data!.projectBundles)
@@ -575,7 +576,7 @@ export function MindMapsEditorPage() {
         activeDraft
           ? encodeMindMap(activeDraft)
           : mapModalState.editing?.content_json ??
-            encodeMindMap(initialMindMapDocument(payload.title)),
+          encodeMindMap(initialMindMapDocument(payload.title)),
       track_id: payload.track_id,
       module_id: payload.module_id,
       project_id: payload.project_id,
@@ -597,6 +598,11 @@ export function MindMapsEditorPage() {
   async function handleNodeSubmit(payload: NodeModalPayload) {
     if (!draft || !selected || !nodeModalState.initialNode) return;
 
+    if (nodeModalState.mode === "create" && draft.nodes.length >= MAX_NODES) {
+      setMessage({ tone: "error", text: `Limite máximo de ${MAX_NODES} nós atingido.` });
+      return;
+    }
+
     const size = sizeForShape(payload.shape);
     const nextNode: MindMapNodeData = {
       ...nodeModalState.initialNode,
@@ -616,6 +622,7 @@ export function MindMapsEditorPage() {
             connections:
               nodeModalState.linkToNodeId &&
               nodeModalState.linkToNodeId !== nextNode.id &&
+              draft.connections.length < MAX_CONNECTIONS &&
               !draft.connections.some((item) =>
                 isSameConnection(item, {
                   sourceId: nodeModalState.linkToNodeId!,
@@ -629,13 +636,13 @@ export function MindMapsEditorPage() {
                       sourceId: nodeModalState.linkToNodeId,
                       targetId: nextNode.id,
                     },
-                  ]
-                : draft.connections,
-          }
+              ]
+              : draft.connections,
+        }
         : {
-            ...draft,
-            nodes: draft.nodes.map((item) => (item.id === nextNode.id ? nextNode : item)),
-          };
+          ...draft,
+          nodes: draft.nodes.map((item) => (item.id === nextNode.id ? nextNode : item)),
+        };
 
     commitDraft(nextDraft, nextNode.id);
     setNodeModalState({
@@ -651,7 +658,11 @@ export function MindMapsEditorPage() {
   }
 
   function openCreateNode(linkToSelected: boolean) {
-    if (!draft) return;
+    console.log("openCreateNode called", linkToSelected, draft, selectedNode);
+    if (!draft) {
+      alert("Draft não disponível");
+      return;
+    }
 
     const baseNode = selectedNode ?? draft.nodes[0] ?? null;
     const baseShape = baseNode?.shape ?? "rectangle";
@@ -767,6 +778,11 @@ export function MindMapsEditorPage() {
 
     if (duplicate) {
       setMessage({ tone: "error", text: "Essa conexão já existe neste mapa." });
+      return;
+    }
+
+    if (activeDraft.connections.length >= MAX_CONNECTIONS) {
+      setMessage({ tone: "error", text: `Limite máximo de ${MAX_CONNECTIONS} conexões atingido.` });
       return;
     }
 
@@ -924,10 +940,10 @@ export function MindMapsEditorPage() {
       nodes: activeDraft.nodes.map((item) =>
         item.id === nodeId
           ? {
-              ...item,
-              x: clamp(gesture.originX + deltaX, 0, BOARD_WIDTH - item.width),
-              y: clamp(gesture.originY + deltaY, 0, BOARD_HEIGHT - item.height),
-            }
+            ...item,
+            x: clamp(gesture.originX + deltaX, 0, BOARD_WIDTH - item.width),
+            y: clamp(gesture.originY + deltaY, 0, BOARD_HEIGHT - item.height),
+          }
           : item,
       ),
     };
@@ -974,291 +990,307 @@ export function MindMapsEditorPage() {
 
   return (
     <>
-      <PageFrame
-        eyebrow="Canvas"
-        title={selected?.title ?? "Editor de Mind Map"}
-        subtitle="Canvas dedicado para construir o mapa sem a biblioteca misturada na mesma tela. Aqui o foco fica em posicionar, conectar e refinar a estrutura visual."
-        actions={
-          <SecondaryButton onClick={goToLibrary}>
-            <ChevronLeft size={16} />
-            Voltar para biblioteca
-          </SecondaryButton>
-        }
-      >
+      <main className="w-full h-[calc(100vh-64px)] relative overflow-hidden bg-surface flex">
+        <div className="absolute inset-0 opacity-20 pointer-events-none z-0">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-[120px]"></div>
+          <div className="absolute bottom-1/3 right-1/4 w-64 h-64 bg-primary-container/10 rounded-full blur-[100px]"></div>
+        </div>
+
         {(error || message) && (
           <div
-            className={
-              message?.tone === "error" || error
-                ? "border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200"
-                : "border border-success/30 bg-success/10 px-4 py-3 text-sm text-success"
-            }
+            className={`absolute top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-3 rounded-xl border text-sm font-medium ${message?.tone === "error" || error
+                ? "border-error/30 bg-error/10 text-error"
+                : "border-primary/30 bg-primary/10 text-primary"
+              }`}
           >
             {error ?? message?.text}
           </div>
         )}
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-          {selected && draft ? (
-            <div className="flex min-w-0 flex-col gap-6">
-              <section className="glass-panel relative min-h-[780px] overflow-hidden border border-border">
+        {selected && draft ? (
+          <div className="flex-1 relative overflow-hidden w-full h-full">
+            <div
+              ref={viewportRef}
+              className={`absolute inset-0 overflow-hidden ${isPanning ? "cursor-grabbing" : isDraggingNode ? "cursor-move" : "cursor-grab"
+                }`}
+              onWheel={handleCanvasWheel}
+              onPointerDown={handleCanvasPointerDown}
+              onPointerMove={handleCanvasPointerMove}
+              onPointerUp={handleCanvasPointerUp}
+              onPointerCancel={handleCanvasPointerUp}
+            >
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(50,208,255,0.16),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(53,211,154,0.12),transparent_28%)]" />
+              <div
+                className="absolute left-0 top-0 will-change-transform"
+                style={{
+                  width: BOARD_WIDTH,
+                  height: BOARD_HEIGHT,
+                  transformOrigin: "0 0",
+                  transform: `translate(${viewState.offsetX}px, ${viewState.offsetY}px) scale(${viewState.scale})`,
+                }}
+              >
                 <div
-                  ref={viewportRef}
-                  className={`relative h-[780px] overflow-hidden ${
-                    isPanning ? "cursor-grabbing" : isDraggingNode ? "cursor-move" : "cursor-grab"
-                  }`}
-                  onWheel={handleCanvasWheel}
-                  onPointerDown={handleCanvasPointerDown}
-                  onPointerMove={handleCanvasPointerMove}
-                  onPointerUp={handleCanvasPointerUp}
-                  onPointerCancel={handleCanvasPointerUp}
+                  className="absolute inset-0"
+                  style={{
+                    backgroundImage:
+                      "linear-gradient(rgba(207,216,227,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(207,216,227,0.12) 1px, transparent 1px), linear-gradient(rgba(207,216,227,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(207,216,227,0.2) 1px, transparent 1px)",
+                    backgroundSize: "40px 40px, 40px 40px, 200px 200px, 200px 200px",
+                  }}
+                />
+                <svg
+                  className="pointer-events-none absolute inset-0"
+                  width={BOARD_WIDTH}
+                  height={BOARD_HEIGHT}
+                  viewBox={`0 0 ${BOARD_WIDTH} ${BOARD_HEIGHT}`}
                 >
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(50,208,255,0.16),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(53,211,154,0.12),transparent_28%)]" />
-                  <div
-                    className="absolute left-0 top-0 will-change-transform"
-                    style={{
-                      width: BOARD_WIDTH,
-                      height: BOARD_HEIGHT,
-                      transformOrigin: "0 0",
-                      transform: `translate(${viewState.offsetX}px, ${viewState.offsetY}px) scale(${viewState.scale})`,
-                    }}
-                  >
-                    <div
-                      className="absolute inset-0"
-                      style={{
-                        backgroundImage:
-                          "linear-gradient(rgba(207,216,227,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(207,216,227,0.12) 1px, transparent 1px), linear-gradient(rgba(207,216,227,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(207,216,227,0.2) 1px, transparent 1px)",
-                        backgroundSize: "40px 40px, 40px 40px, 200px 200px, 200px 200px",
-                      }}
+                  {connectionPaths.map((connection) => (
+                    <path
+                      key={connection.id}
+                      d={connection.d}
+                      fill="none"
+                      stroke={connection.stroke}
+                      strokeWidth={connection.strokeWidth}
+                      strokeLinecap="round"
                     />
-                    <svg
-                      className="pointer-events-none absolute inset-0"
-                      width={BOARD_WIDTH}
-                      height={BOARD_HEIGHT}
-                      viewBox={`0 0 ${BOARD_WIDTH} ${BOARD_HEIGHT}`}
-                    >
-                      {connectionPaths.map((connection) => (
-                        <path
-                          key={connection.id}
-                          d={connection.d}
-                          fill="none"
-                          stroke={connection.stroke}
-                          strokeWidth={connection.strokeWidth}
-                          strokeLinecap="round"
-                        />
-                      ))}
-                    </svg>
-                    {draft.nodes.map((node) => {
-                      const active = node.id === selectedNode?.id;
+                  ))}
+                </svg>
+                {draft.nodes.map((node) => {
+                  const active = node.id === selectedNode?.id;
+                  return (
+                    <MindMapNodeButton
+                      key={node.id}
+                      node={node}
+                      active={active}
+                      onPointerDown={handleNodePointerDown}
+                      onPointerMove={handleNodePointerMove}
+                      onPointerUp={handleNodePointerUp}
+                    />
+                  );
+                })}
+              </div>
+              
+              {/* Top Bar - Centered Toolbar */}
+              <div className="absolute top-4 left-0 right-0 z-50 flex justify-center" data-canvas-overlay="true">
+                <div className="flex items-center gap-1.5 bg-[rgba(19,19,19,0.95)] backdrop-blur-xl rounded-2xl border border-border/60 px-3 py-2 shadow-lg" data-canvas-overlay="true">
+                  <button 
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      openCreateNode(false);
+                    }} 
+                    className="flex items-center gap-1 px-3 py-1.5 bg-primary/20 hover:bg-primary/30 text-primary text-[10px] font-bold rounded-lg border border-primary/30 transition-colors"
+                  >
+                    <Plus size={12} /> Novo nó
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleToggleConnectMode();
+                    }}
+                    disabled={!selectedNode} 
+                    className={`flex items-center gap-1 px-3 py-1.5 text-[10px] font-bold rounded-lg border transition-colors ${connectMode ? "bg-warning/20 text-warning border-warning/30" : "bg-surface-container-highest hover:bg-white/5 text-on-surface border-white/10 disabled:opacity-40"}`}
+                  >
+                    <Waypoints size={12} /> {connectMode ? "Cancelar" : "Conectar"}
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      openEditNode(selectedNode);
+                    }}
+                    disabled={!selectedNode} 
+                    className="flex items-center gap-1 px-3 py-1.5 bg-surface-container-highest hover:bg-white/5 text-on-surface text-[10px] font-bold rounded-lg border border-white/10 transition-colors disabled:opacity-40"
+                  >
+                    <Pencil size={12} /> Editar
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleFitCanvas();
+                    }}
+                    className="flex items-center justify-center p-2 bg-surface-container-highest hover:bg-white/5 text-on-surface rounded-lg border border-white/10 transition-colors" 
+                    title="Ajustar"
+                  >
+                    <Maximize2 size={12} />
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleResetCanvas();
+                    }}
+                    className="flex items-center justify-center p-2 bg-surface-container-highest hover:bg-white/5 text-on-surface rounded-lg border border-white/10 transition-colors" 
+                    title="Resetar"
+                  >
+                    <RotateCcw size={12} />
+                  </button>
+                  <div className="w-px h-6 bg-white/10 mx-1"></div>
+                  <button 
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if(selectedNode) handleDeleteNode(selectedNode);
+                    }}
+                    disabled={!selectedNode} 
+                    className="flex items-center gap-1 px-3 py-1.5 text-[10px] font-bold rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 transition-colors disabled:opacity-40"
+                  >
+                    <Trash2 size={12} /> Excluir
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      persistDocument(draft, "Salvo.");
+                    }}
+                    disabled={!dirty || saving} 
+                    className="flex items-center gap-1 px-3 py-1.5 bg-primary hover:bg-primary/90 text-on-primary-fixed text-[10px] font-bold rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    <Save size={12} /> {saving ? "..." : "Salvar"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Map Info - Top Left */}
+              <div className="absolute top-4 left-4 z-40 pointer-events-auto">
+                <div className="bg-[rgba(19,19,19,0.85)] backdrop-blur-xl rounded-xl border border-border/60 px-3 py-2 shadow-lg">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-primary shadow-[0_0_8px_rgba(129,236,255,0.45)]"></span>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">MAPA</span>
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${dirty ? "bg-warning/20 text-warning" : "bg-success/20 text-success"}`}>
+                      {dirty ? "SALVO" : "SYNC"}
+                    </span>
+                  </div>
+                  <p className="truncate text-sm font-display text-white mt-1">{selected.title}</p>
+                  <p className="text-[9px] text-text-secondary">
+                    {draft.nodes.length} nós • {draft.connections.length} conexões
+                  </p>
+                </div>
+              </div>
+
+              {/* Bottom Bar */}
+              <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between pointer-events-none z-40">
+                <div className="pointer-events-auto">
+                  <div className="bg-[rgba(19,19,19,0.7)] backdrop-blur-md rounded-xl px-3 py-2 border border-border/40 flex items-center gap-2 text-[10px] text-text-secondary">
+                    <Move size={12} />
+                    Arraste o fundo para navegar e o scroll para aproximar
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="bg-[rgba(19,19,19,0.7)] backdrop-blur-md rounded-lg px-3 py-1.5 text-sm text-white font-mono">
+                    {Math.round(viewState.scale * 100)}%
+                  </span>
+                  {selectedNode && (
+                    <div className="bg-[rgba(19,19,19,0.7)] backdrop-blur-md rounded-lg px-3 py-1.5 border border-primary/30">
+                      <span className="text-xs text-primary font-bold">Selecionado:</span>
+                      <span className="text-sm text-white ml-2">{selectedNode.label}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center relative z-10 w-full h-full">
+            <EmptyState title="Sem mapa selecionado" subtitle="Volte para a biblioteca, escolha um mapa e abra o canvas para continuar a edicao." action={<SecondaryButton onClick={goToLibrary}><ChevronLeft size={16} />Ir para a biblioteca</SecondaryButton>} />
+          </div>
+        )}
+        <aside className="absolute top-0 right-0 h-full w-[400px] bg-[rgba(19,19,19,0.7)] backdrop-blur-[20px] border-l border-white/5 z-40 px-6 py-8 shadow-[-20px_0px_40px_rgba(0,0,0,0.4)] overflow-y-auto flex flex-col">
+          <div className="flex justify-between items-center mb-8 shrink-0">
+            <div>
+              <div className="inline-block px-2 py-1 bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold rounded mb-2 uppercase tracking-widest">{selectedNode ? "Node_Details" : "Inspector"}</div>
+            </div>
+            <button onClick={goToLibrary} className="text-on-surface-variant hover:text-white transition-colors" title="Back to Library">
+              <ChevronLeft size={24} />
+            </button>
+          </div>
+          {selectedNode && draft ? (
+            <div className="flex flex-col gap-6">
+              <NodePreviewCard node={selectedNode} active />
+              <div className="grid gap-3">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <MetricLine label="Largura" value={`${Math.round(selectedNode.width)} px`} />
+                  <MetricLine label="Altura" value={`${Math.round(selectedNode.height)} px`} />
+                  <MetricLine label="Atualizado" value={formatShortDate(selected?.updated_at)} />
+                  <MetricLine label="Cor" value={selectedNode.colorHex.toUpperCase()} />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <PrimaryButton onClick={() => openEditNode(selectedNode)}>
+                    <Pencil size={16} />
+                    Editar nó
+                  </PrimaryButton>
+                  <SecondaryButton onClick={handleToggleConnectMode}>
+                    <Link2 size={16} />
+                    {connectMode ? "Cancelar modo conexão" : "Usar como origem"}
+                  </SecondaryButton>
+                  <GhostButton onClick={() => void handleDeleteNode(selectedNode)} className="text-red-200 hover:bg-red-500/10 hover:text-red-100">
+                    <Trash2 size={16} />
+                    Excluir nó
+                  </GhostButton>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-base font-display text-white">Conexões</h3>
+                    <p className="text-sm text-text-secondary">
+                      Remova vínculos redundantes ou revise os caminhos ativos deste nó.
+                    </p>
+                  </div>
+                  <Pill tone={selectedConnections.length ? "primary" : "neutral"}>
+                    {selectedConnections.length}
+                  </Pill>
+                </div>
+                {selectedConnections.length ? (
+                  <div className="flex flex-col gap-2">
+                    {selectedConnections.map((connection) => {
+                      const relatedNode = otherNode(draft, connection, selectedNode.id);
                       return (
-                        <MindMapNodeButton
-                          key={node.id}
-                          node={node}
-                          active={active}
-                          onPointerDown={handleNodePointerDown}
-                          onPointerMove={handleNodePointerMove}
-                          onPointerUp={handleNodePointerUp}
-                        />
+                        <div key={connection.id} className="flex items-center justify-between gap-3 border border-border/50 bg-background/40 px-3 py-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-white">
+                              {relatedNode?.label ?? "Conexão"}
+                            </p>
+                            <p className="text-xs uppercase tracking-[0.18em] text-text-secondary">
+                              {relatedNode ? shapeLabel(relatedNode.shape) : "Sem destino"}
+                            </p>
+                          </div>
+                          <GhostButton onClick={() => void handleDeleteConnection(connection.id)} className="text-red-200 hover:bg-red-500/10 hover:text-red-100">
+                            <Trash2 size={15} />
+                          </GhostButton>
+                        </div>
                       );
                     })}
                   </div>
-                  <div className="pointer-events-none absolute inset-x-0 top-0 p-4 lg:p-5">
-                    <div className="grid gap-4 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
-                      <CanvasOverlayPanel className="pointer-events-auto" data-canvas-overlay="true">
-                        <div className="flex flex-col gap-3">
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="min-w-0">
-                              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Canvas ativo</p>
-                              <h2 className="truncate text-2xl font-display text-white">{selected.title}</h2>
-                              <p className="mt-1 text-sm text-text-secondary">
-                                {selected.folder_name} • {formatDateTime(selected.updated_at)}
-                              </p>
-                            </div>
-                            <Pill tone={dirty ? "warning" : "primary"}>
-                              {dirty ? "Alterações locais" : "Sincronizado"}
-                            </Pill>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            <Pill tone="primary">{draft.nodes.length} nós</Pill>
-                            <Pill tone="neutral">{draft.connections.length} conexões</Pill>
-                            {selectedLabels.map((label) => (
-                              <Pill key={label} tone="neutral">{label}</Pill>
-                            ))}
-                          </div>
-                          <p className="text-sm leading-relaxed text-text-secondary">
-                            {connectMode
-                              ? connectionSourceId
-                                ? "Modo conexão ativo. A origem já foi definida; clique no nó de destino."
-                                : "Modo conexão ativo. Clique em um nó para definir a origem."
-                              : "Arraste os nós, use o zoom do mouse e ajuste o enquadramento para organizar a estrutura do mapa."}
-                          </p>
-                        </div>
-                      </CanvasOverlayPanel>
-                      <CanvasOverlayPanel className="pointer-events-auto justify-self-stretch xl:justify-self-end" data-canvas-overlay="true">
-                        <div className="flex flex-wrap justify-end gap-2">
-                          <PrimaryButton onClick={() => openCreateNode(false)}>
-                            <Plus size={16} />
-                            Novo nó
-                          </PrimaryButton>
-                          <SecondaryButton onClick={() => openCreateNode(true)} disabled={!selectedNode}>
-                            <Link2 size={16} />
-                            Adicionar ligado
-                          </SecondaryButton>
-                          <SecondaryButton onClick={handleToggleConnectMode} disabled={!selectedNode}>
-                            <Waypoints size={16} />
-                            {connectMode ? "Cancelar conexão" : "Conectar"}
-                          </SecondaryButton>
-                          <SecondaryButton onClick={handleFitCanvas}>
-                            <Maximize2 size={16} />
-                            Ajustar
-                          </SecondaryButton>
-                          <SecondaryButton onClick={handleResetCanvas}>
-                            <RotateCcw size={16} />
-                            Resetar
-                          </SecondaryButton>
-                          <SecondaryButton onClick={() => openEditNode(selectedNode)} disabled={!selectedNode}>
-                            <Pencil size={16} />
-                            Editar nó
-                          </SecondaryButton>
-                          <PrimaryButton onClick={() => void persistDocument(draft, "Canvas salvo.")} disabled={!dirty || saving}>
-                            <Save size={16} />
-                            {saving ? "Salvando..." : "Salvar"}
-                          </PrimaryButton>
-                          <GhostButton onClick={() => setMapModalState({ open: true, editing: selected })}>
-                            <FolderOpen size={16} />
-                            Editar mapa
-                          </GhostButton>
-                          <GhostButton onClick={() => void handleDeleteMap(selected)} className="text-red-200 hover:bg-red-500/10 hover:text-red-100">
-                            <Trash2 size={16} />
-                            Excluir
-                          </GhostButton>
-                        </div>
-                      </CanvasOverlayPanel>
-                    </div>
-                  </div>
-                  <div className="absolute bottom-4 left-4 right-4 flex flex-wrap items-center justify-between gap-3">
-                    <CanvasOverlayPanel className="pointer-events-auto" data-canvas-overlay="true">
-                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">
-                        <Move size={14} />
-                        Arraste o fundo para navegar e o scroll para aproximar
-                      </div>
-                    </CanvasOverlayPanel>
-                    <CanvasOverlayPanel className="pointer-events-auto" data-canvas-overlay="true">
-                      <div className="flex items-center gap-3 text-sm text-white">
-                        <span>{Math.round(viewState.scale * 100)}%</span>
-                        {selectedNode ? (
-                          <span className="max-w-[220px] truncate text-text-secondary">
-                            Selecionado: {selectedNode.label}
-                          </span>
-                        ) : null}
-                      </div>
-                    </CanvasOverlayPanel>
-                  </div>
+                ) : (
+                  <EmptyState
+                    title="Sem conexões ainda"
+                    subtitle="Use “Conectar” no canvas ou no inspetor para ligar este nó a outro conceito."
+                  />
+                )}
+              </div>
+              <DataCard dense title="Prévia do mapa" subtitle="Visão geral compacta do board atual.">
+                <div className="relative h-[220px] overflow-hidden border border-border/50 bg-background/50">
+                  <MiniMindMapPreview document={draft} />
                 </div>
-              </section>
+              </DataCard>
             </div>
           ) : (
-            <DataCard className="xl:col-span-2" title="Canvas" subtitle="Selecione um mapa da biblioteca para abrir o editor dedicado.">
-              <EmptyState
-                title="Sem mapa selecionado"
-                subtitle="Volte para a biblioteca, escolha um mapa e abra o canvas para continuar a edicao."
-                action={
-                  <SecondaryButton onClick={goToLibrary}>
-                    <ChevronLeft size={16} />
-                    Ir para biblioteca
-                  </SecondaryButton>
-                }
-              />
-            </DataCard>
+            <EmptyState
+              title="Nenhum nó selecionado"
+              subtitle="Clique em um nó do canvas para abrir o inspector e revisar conexões, forma e posição."
+            />
           )}
-          <DataCard
-            title={selectedNode ? selectedNode.label : "Inspector"}
-            subtitle={
-              selectedNode
-                ? `${shapeLabel(selectedNode.shape)} • ${Math.round(selectedNode.x)} x ${Math.round(selectedNode.y)}`
-                : "Selecione um nó para revisar o conteúdo e as conexões."
-            }
-            className="min-h-[780px]"
-          >
-            {selectedNode && draft ? (
-              <div className="flex flex-col gap-6">
-                <NodePreviewCard node={selectedNode} active />
-                <div className="grid gap-3">
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <MetricLine label="Largura" value={`${Math.round(selectedNode.width)} px`} />
-                    <MetricLine label="Altura" value={`${Math.round(selectedNode.height)} px`} />
-                    <MetricLine label="Atualizado" value={formatShortDate(selected?.updated_at)} />
-                    <MetricLine label="Cor" value={selectedNode.colorHex.toUpperCase()} />
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <PrimaryButton onClick={() => openEditNode(selectedNode)}>
-                      <Pencil size={16} />
-                      Editar nó
-                    </PrimaryButton>
-                    <SecondaryButton onClick={handleToggleConnectMode}>
-                      <Link2 size={16} />
-                      {connectMode ? "Cancelar modo conexão" : "Usar como origem"}
-                    </SecondaryButton>
-                    <GhostButton onClick={() => void handleDeleteNode(selectedNode)} className="text-red-200 hover:bg-red-500/10 hover:text-red-100">
-                      <Trash2 size={16} />
-                      Excluir nó
-                    </GhostButton>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <h3 className="text-base font-display text-white">Conexões</h3>
-                      <p className="text-sm text-text-secondary">
-                        Remova vínculos redundantes ou revise os caminhos ativos deste nó.
-                      </p>
-                    </div>
-                    <Pill tone={selectedConnections.length ? "primary" : "neutral"}>
-                      {selectedConnections.length}
-                    </Pill>
-                  </div>
-                  {selectedConnections.length ? (
-                    <div className="flex flex-col gap-2">
-                      {selectedConnections.map((connection) => {
-                        const relatedNode = otherNode(draft, connection, selectedNode.id);
-                        return (
-                          <div key={connection.id} className="flex items-center justify-between gap-3 border border-border/50 bg-background/40 px-3 py-3">
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold text-white">
-                                {relatedNode?.label ?? "Conexão"}
-                              </p>
-                              <p className="text-xs uppercase tracking-[0.18em] text-text-secondary">
-                                {relatedNode ? shapeLabel(relatedNode.shape) : "Sem destino"}
-                              </p>
-                            </div>
-                            <GhostButton onClick={() => void handleDeleteConnection(connection.id)} className="text-red-200 hover:bg-red-500/10 hover:text-red-100">
-                              <Trash2 size={15} />
-                            </GhostButton>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <EmptyState
-                      title="Sem conexões ainda"
-                      subtitle="Use “Conectar” no canvas ou no inspetor para ligar este nó a outro conceito."
-                    />
-                  )}
-                </div>
-                <DataCard dense title="Prévia do mapa" subtitle="Visão geral compacta do board atual.">
-                  <div className="relative h-[220px] overflow-hidden border border-border/50 bg-background/50">
-                    <MiniMindMapPreview document={draft} />
-                  </div>
-                </DataCard>
-              </div>
-            ) : (
-              <EmptyState
-                title="Nenhum nó selecionado"
-                subtitle="Clique em um nó do canvas para abrir o inspector e revisar conexões, forma e posição."
-              />
-            )}
-          </DataCard>
-        </div>
-      </PageFrame>
+        </aside>
+      </main>
       <MindMapMetaModal
         open={mapModalState.open}
         editing={mapModalState.editing}
@@ -1482,9 +1514,8 @@ function MindMapNodeModal({
               <button
                 key={item}
                 type="button"
-                className={`h-9 w-9 rounded-full border transition-transform ${
-                  colorHex === item ? "scale-110 border-white" : "border-white/20"
-                }`}
+                className={`h-9 w-9 rounded-full border transition-transform ${colorHex === item ? "scale-110 border-white" : "border-white/20"
+                  }`}
                 style={{ background: item }}
                 onClick={() => setColorHex(item)}
               >
@@ -1522,7 +1553,7 @@ function CanvasOverlayPanel({
   return (
     <div
       {...props}
-      className={`rounded-[24px] border border-border/80 bg-panel/90 px-4 py-4 shadow-[0_24px_48px_rgba(0,0,0,0.2)] backdrop-blur-xl ${className ?? ""}`}
+      className={`rounded-[24px] border border-border/80 bg-panel/90 px-4 py-4 shadow-[0_24px_48px_rgba(0,0,0,0.2)] backdrop-blur-xl z-50 ${className ?? ""}`}
     >
       {children}
     </div>
@@ -1574,7 +1605,7 @@ const MindMapNodeButton = memo(function MindMapNodeButton({
       type="button"
       data-node-id={node.id}
       data-mindmap-node="true"
-      className="absolute flex items-center justify-center border px-4 py-3 text-center text-sm font-semibold tracking-tight transition-[transform,box-shadow,border-color] duration-150"
+      className={`absolute flex items-center justify-center border px-4 py-3 text-center text-sm font-semibold tracking-tight transition-[transform,box-shadow,border-color,filter] duration-150 ${active ? "filter drop-shadow-[0_0_8px_rgba(129,236,255,0.4)]" : "filter drop-shadow-[0_0_2px_rgba(0,0,0,0.5)]"}`}
       style={style}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
@@ -1611,7 +1642,7 @@ function NodePreviewCard({
   if (node.shape === "diamond") {
     return (
       <div
-        className="flex items-center justify-center border text-center text-sm font-semibold"
+        className={`flex items-center justify-center border text-center text-sm font-semibold ${active ? "filter drop-shadow-[0_0_8px_rgba(129,236,255,0.4)]" : ""}`}
         style={{
           ...sharedStyle,
           clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)",
@@ -1624,7 +1655,7 @@ function NodePreviewCard({
 
   return (
     <div
-      className="flex items-center justify-center border px-4 py-3 text-center text-sm font-semibold"
+      className={`flex items-center justify-center border px-4 py-3 text-center text-sm font-semibold ${active ? "filter drop-shadow-[0_0_8px_rgba(129,236,255,0.4)]" : ""}`}
       style={{
         ...sharedStyle,
         borderRadius:

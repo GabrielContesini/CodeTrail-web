@@ -41,8 +41,6 @@ Variaveis opcionais:
 
 ```bash
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
-GITHUB_TOKEN=
-GITHUB_RELEASES_TOKEN=
 E2E_BASE_URL=http://127.0.0.1:3001
 E2E_USER_EMAIL=
 E2E_USER_PASSWORD=
@@ -110,8 +108,8 @@ Cobertura automatizada atual:
 - carregamento inicial, redirect raiz, erros criticos de cliente e reduced motion
 - tela de autenticacao em login/cadastro, callback OAuth com erro e credenciais invalidas
 - protecao de rotas privadas sem sessao
-- APIs internas de billing config e download Windows
-- navegacao autenticada, sidebar, onboarding reabrivel, billing, download e sessao no workspace
+- API interna de billing config
+- navegacao autenticada, sidebar, onboarding reabrivel, billing e sessao no workspace
 - auditoria detalhada de CRUDs em sessoes, tarefas, revisoes, notas, projetos, flashcards e mind maps
 
 Limitacoes externas deliberadas:
@@ -129,7 +127,6 @@ Limitacoes externas deliberadas:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `STRIPE_PUBLISHABLE_KEY`
-5. se quiser o endpoint de download Windows com menos risco de rate limit, configure tambem `GITHUB_TOKEN` ou `GITHUB_RELEASES_TOKEN`
 
 ## CI/CD
 

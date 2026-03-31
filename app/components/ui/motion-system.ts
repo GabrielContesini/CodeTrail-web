@@ -70,22 +70,17 @@ export function createTransition(reduced: boolean | null, duration = motionToken
 
 export function fadeUpVariants(reduced: boolean | null, distance = 18): Variants {
   return {
-    hidden: {
-      opacity: 0,
-      y: reduced ? 0 : distance,
-      scale: reduced ? 1 : 0.992,
-    },
-    visible: {
+    hidden: { opacity: 0 },
+    visible: { 
       opacity: 1,
-      y: 0,
-      scale: 1,
-      transition: createTransition(reduced, motionTokens.duration.moderate),
+      transition: { 
+        duration: 0.5, 
+        ease: [0.25, 0.46, 0.45, 0.94] 
+      } 
     },
-    exit: {
-      opacity: 0,
-      y: reduced ? 0 : -12,
-      scale: reduced ? 1 : 0.992,
-      transition: createTransition(reduced, motionTokens.duration.fast),
+    exit: { 
+      opacity: 0, 
+      transition: { duration: 0.2 } 
     },
   };
 }

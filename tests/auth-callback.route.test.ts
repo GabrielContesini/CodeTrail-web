@@ -69,7 +69,7 @@ describe("GET /auth/callback", () => {
     const { GET } = await import("../app/auth/callback/route");
     const response = await GET(
       new NextRequest(
-        "http://localhost:3001/auth/callback?plan=free&target=download&next=%2Fworkspace%2Fdashboard",
+        "http://localhost:3001/auth/callback?plan=free&next=%2Fworkspace%2Fdashboard",
       ),
     );
 
@@ -81,7 +81,7 @@ describe("GET /auth/callback", () => {
     const redirectUrl = new URL(location!);
     expect(redirectUrl.pathname).toBe("/auth");
     expect(redirectUrl.searchParams.get("plan")).toBe("free");
-    expect(redirectUrl.searchParams.get("target")).toBe("download");
+    expect(redirectUrl.searchParams.get("target")).toBeNull();
     expect(redirectUrl.searchParams.get("next")).toBe("/workspace/dashboard");
     expect(redirectUrl.searchParams.get("auth_error")).toBe(
       "Não foi possível validar o retorno do Google.",

@@ -1,47 +1,47 @@
 "use client";
 
-import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
-import { useWorkspace } from "@/app/workspace/_components/workspace-provider";
-import { IconButton, Pill, PrimaryButton } from "@/app/workspace/_components/workspace-ui";
 import {
-  createTransition,
-  fadeUpVariants,
-  listItemVariants,
-  modalVariants,
-  motionTokens,
-  staggerContainerVariants,
-  useMotionPreferences,
+    createTransition,
+    fadeUpVariants,
+    listItemVariants,
+    modalVariants,
+    motionTokens,
+    staggerContainerVariants,
+    useMotionPreferences,
 } from "@/app/components/ui/motion-system";
+import { useWorkspace } from "@/app/workspace/_components/workspace-provider";
 import {
-  getInitials,
-  navigationItems,
-  planCode,
-  resolveSection,
-  routeMetaBySection,
+    getInitials,
+    navigationItems,
+    planCode,
+    resolveSection,
+    routeMetaBySection,
 } from "@/utils/workspace/helpers";
+import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
 import {
-  Activity,
-  BookOpen,
-  ChartSpline,
-  CheckSquare,
-  ChevronRight,
-  FolderKanban,
-  Layers3,
-  LayoutDashboard,
-  LoaderCircle,
-  LogOut,
-  Map,
-  Menu,
-  NotepadText,
-  RefreshCcw,
-  Settings,
-  Sparkles,
-  X,
+    Activity,
+    Bell,
+    ChartSpline,
+    CheckSquare,
+    FolderKanban,
+    Layers3,
+    LayoutDashboard,
+    LoaderCircle,
+    LogOut,
+    Map,
+    Menu,
+    NotepadText,
+    PanelLeft,
+    RefreshCcw,
+    Search,
+    Settings,
+    Sparkles,
+    X,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 const brandMark = "/design/CodeTrailMainIcon.png";
 
@@ -65,8 +65,33 @@ function cx(...parts: Array<string | false | null | undefined>) {
 
 export function WorkspaceShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { data, user, refreshing, operation, reload, signOut } = useWorkspace();
+  const { data, user, refreshing, operation, reload, signOut, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification } = useWorkspace();
   const [collapsed, setCollapsed] = useState(false);
+  const [commandOpen, setCommandOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const commandRef = React.useRef<HTMLDivElement>(null);
+  const [showContent, setShowContent] = useState(false);
+  
+  useEffect(() => {
+    if (data && !showContent) {
+      const timer = setTimeout(() => setShowContent(true), 50);
+      return () => clearTimeout(timer);
+    }
+  }, [data, showContent]);
+  
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        commandRef.current &&
+        !commandRef.current.contains(e.target as Node)
+      ) {
+        setCommandOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [dateLabel, setDateLabel] = useState("Sincronizando horario");
   const { reduced, hoverLift, press, transition } = useMotionPreferences();
@@ -75,11 +100,18 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
   const sidebarWidthClass = collapsed ? "md:w-[96px]" : "md:w-[280px]";
   const sidebarPaddingClass = collapsed ? "md:!px-3 md:!py-5" : "";
   const sidebarShellTransition = reduced
-    ? "transition-[width,padding,transform] duration-150"
-    : "transition-[width,padding,transform,box-shadow,border-color,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]";
+    ? "transition-all duration-200"
+    : "transition-all duration-400 ease-out";
+  const sidebarVariants = {
+    collapsed: { width: "96px" },
+    expanded: { width: "280px" },
+  };
 
-  const initials = getInitials(data?.profile?.full_name || user.fullName || user.email);
-  const displayName = data?.profile?.full_name || user.fullName || "Seu workspace";
+  const initials = getInitials(
+    data?.profile?.full_name || user.fullName || user.email,
+  );
+  const displayName =
+    data?.profile?.full_name || user.fullName || "Seu workspace";
   const currentPlan = planCode(data?.billing ?? null);
   const summary = data?.dashboardSummary;
   useEffect(() => {
@@ -104,7 +136,10 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   const sidebarStats = [
-    { label: "Horas semana", value: `${summary?.hoursThisWeek.toFixed(1) ?? "0.0"}h` },
+    {
+      label: "Horas semana",
+      value: `${summary?.hoursThisWeek.toFixed(1) ?? "0.0"}h`,
+    },
     { label: "Pendências", value: `${summary?.pendingTasks ?? 0}` },
   ];
   const iconLinkClass =
@@ -114,8 +149,8 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
     <LayoutGroup id="workspace-shell">
       <motion.div
         className={cx(
-          "h-[100dvh] w-full overflow-hidden bg-background font-ui text-text-primary",
-          "flex flex-col gap-4 p-0 md:flex-row md:gap-5 md:p-4 lg:gap-6 lg:p-5",
+          "h-[100dvh] w-full overflow-hidden bg-background font-ui text-on-surface",
+          "flex flex-col p-0 md:flex-row",
         )}
         initial="hidden"
         animate="visible"
@@ -135,39 +170,47 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
         </AnimatePresence>
 
         <motion.aside
+          layout
           initial={reduced ? false : { x: -22, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
+          variants={reduced ? undefined : sidebarVariants}
+          transition={createTransition(reduced, reduced ? 0.2 : 0.4)}
           data-testid="workspace-sidebar"
           data-state={collapsed ? "collapsed" : "expanded"}
           className={cx(
-            "workspace-panel workspace-panel--elevated z-50 shrink-0",
-            "fixed inset-y-0 left-0 flex flex-col gap-6 overflow-hidden border-y-0 border-l-0 rounded-none md:relative md:rounded-2xl md:border-y md:border-l",
-            "w-[280px] -translate-x-full md:translate-x-0",
-            sidebarWidthClass,
-            sidebarPaddingClass,
+            "z-50 shrink-0",
+            "fixed inset-y-0 left-0 flex flex-col overflow-hidden border-r border-[#484847]/15 md:relative",
+            "w-[280px] md:translate-x-0 h-screen",
             sidebarShellTransition,
-            mobileNavOpen && "translate-x-0 border-r",
-            collapsed ? "items-center p-5" : "p-5 lg:p-6",
+            mobileNavOpen
+              ? "visible translate-x-0 pointer-events-auto"
+              : "invisible -translate-x-full pointer-events-none md:visible md:pointer-events-auto",
+            "bg-[#0e0e0e]",
+            collapsed ? "md:w-[96px]" : "md:w-[280px]",
           )}
         >
-          <motion.div
-            transition={transition}
+          <div
             className={cx(
-              "w-full",
-              collapsed ? "flex flex-col items-center gap-3" : "relative flex items-center justify-between",
+              "px-8 py-10",
+              collapsed && "px-4 flex flex-col items-center",
             )}
           >
-            <motion.div className={cx("flex items-center gap-3", collapsed && "justify-center")}>
+            <div
+              className={cx(
+                "flex items-center gap-3",
+                collapsed && "justify-center",
+              )}
+            >
               <motion.div
                 whileHover={hoverLift}
                 transition={transition}
-                className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl border border-primary/20 bg-primary/10 shadow-[0_0_18px_rgba(50,208,255,0.14)]"
+                className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-primary/20 bg-primary/10 shadow-[0_0_18px_rgba(50,208,255,0.14)] shrink-0"
               >
                 <Image
                   src={brandMark}
-                  alt="CodeTrail"
-                  width={40}
-                  height={40}
+                  alt="CodeTrail Logo"
+                  width={34}
+                  height={34}
                   className="h-full w-full object-cover"
                   priority
                 />
@@ -176,123 +219,45 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
                 {!collapsed ? (
                   <motion.div
                     className="flex flex-col"
-                    initial={{ opacity: 0, x: -6 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -8 }}
-                    transition={createTransition(reduced, motionTokens.duration.fast)}
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: "auto" }}
+                    exit={{ opacity: 0, width: 0 }}
+                    transition={createTransition(
+                      reduced,
+                      reduced ? 0.15 : 0.35,
+                    )}
                   >
-                    <strong className="font-display text-base leading-none tracking-tight text-white">CodeTrail</strong>
-                    <span className="mt-1 text-[10px] uppercase tracking-widest text-primary/80">Sistema do workspace</span>
+                    <strong className="text-xl font-bold text-primary tracking-tight uppercase">
+                      CodeTrail
+                    </strong>
+                    <span className="text-[10px] text-on-surface-variant tracking-[0.2em] font-bold mt-1 uppercase">
+                      Terminal de Operação
+                    </span>
                   </motion.div>
                 ) : null}
               </AnimatePresence>
-            </motion.div>
-
-            <div className={cx("flex items-center gap-2", collapsed && "w-full justify-center")}>
-              <IconButton
-                className="hidden opacity-0 md:flex md:opacity-100"
-                onClick={() => setCollapsed((value) => !value)}
-                aria-label={collapsed ? "Expandir sidebar" : "Recolher sidebar"}
-                title={collapsed ? "Expandir sidebar" : "Recolher sidebar"}
-              >
-                <motion.span
-                  animate={reduced ? undefined : { rotate: collapsed ? 0 : 180 }}
-                  transition={createTransition(reduced, motionTokens.duration.fast)}
-                  className="inline-flex"
-                >
-                  <ChevronRight size={16} />
-                </motion.span>
-              </IconButton>
-              <IconButton
-                className="md:hidden"
-                onClick={() => setMobileNavOpen(false)}
-                aria-label="Fechar sidebar"
-                title="Fechar sidebar"
-              >
-                <X size={18} />
-              </IconButton>
             </div>
-          </motion.div>
-
-          <AnimatePresence initial={false}>
-            {!collapsed ? (
-              <motion.div
-                className="mt-1 grid grid-cols-2 gap-3"
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={createTransition(reduced, motionTokens.duration.fast)}
-              >
-                {sidebarStats.map((item) => (
-                  <motion.div
-                    key={item.label}
-                    whileHover={hoverLift}
-                    transition={transition}
-                    className="flex flex-col rounded-2xl border border-border/60 bg-white/[0.03] p-3"
-                  >
-                    <span className="text-[9px] font-semibold uppercase tracking-widest text-text-secondary">{item.label}</span>
-                    <strong className="mt-1 font-display text-lg text-white">{item.value}</strong>
-                  </motion.div>
-                ))}
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
-
-          <motion.div className="w-full">
-            <motion.div whileHover={hoverLift} whileTap={press} transition={transition}>
-              <Link
-                href="/workspace/sessions"
-                onClick={() => setMobileNavOpen(false)}
-                className="workspace-button workspace-button--primary touch-target w-full text-xs uppercase tracking-widest"
-              >
-                <BookOpen size={16} className={collapsed ? "mx-auto" : ""} />
-                <AnimatePresence initial={false}>
-                  {!collapsed ? (
-                    <motion.span
-                      initial={{ opacity: 0, x: -4 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -6 }}
-                      transition={createTransition(reduced, motionTokens.duration.fast)}
-                    >
-                      Nova sessão
-                    </motion.span>
-                  ) : null}
-                </AnimatePresence>
-              </Link>
-            </motion.div>
-          </motion.div>
+          </div>
 
           <motion.nav
-            className="scrollbar-hide -mx-2 flex flex-1 flex-col gap-1.5 overflow-y-auto px-2 pb-3"
+            className="scrollbar-hide flex flex-1 flex-col overflow-y-auto mt-4"
             aria-label="Navegação principal do workspace"
             initial="hidden"
             animate="visible"
             variants={staggerContainerVariants(reduced, 0.045)}
           >
-            <AnimatePresence initial={false}>
-              {!collapsed ? (
-                <motion.span
-                  className="mb-2 mt-4 px-2 text-[10px] font-bold uppercase tracking-widest text-text-secondary"
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={createTransition(reduced, motionTokens.duration.fast)}
-                >
-                  Sistemas
-                </motion.span>
-              ) : null}
-            </AnimatePresence>
-
             {navigationItems.map((item) => {
               const Icon = icons[item.icon as keyof typeof icons];
-              const active = section === item.section || (item.section === "settings" && section === "settings-billing");
+              const active =
+                section === item.section ||
+                (item.section === "settings" && section === "settings-billing");
 
               return (
                 <motion.div
                   key={item.href}
                   layout
                   variants={listItemVariants(reduced)}
-                  whileHover={reduced ? undefined : { x: collapsed ? 0 : 2 }}
+                  whileHover={reduced ? undefined : { x: collapsed ? 0 : 4 }}
                   whileTap={press}
                   transition={transition}
                 >
@@ -302,36 +267,39 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
                     title={item.label}
                     aria-current={active ? "page" : undefined}
                     onClick={() => setMobileNavOpen(false)}
-                  className={cx(
-                      "relative flex items-center overflow-hidden border border-transparent px-3 py-3.5 text-sm font-medium transition-[color,border-color,background-color] duration-200",
-                      collapsed ? "justify-center rounded-2xl" : "gap-3 rounded-[20px]",
+                    className={cx(
+                      "flex items-center gap-3 py-3 transition-all duration-200",
+                      collapsed
+                        ? "justify-center rounded-2xl mx-4 px-0"
+                        : "px-8",
                       active
-                        ? "border-primary/20 text-white"
-                        : "text-text-secondary hover:border-border/70 hover:bg-white/[0.04] hover:text-white",
+                        ? "text-primary bg-gradient-to-r from-primary/10 to-transparent border-r-2 border-primary translate-x-1"
+                        : "text-on-surface-variant hover:text-white hover:bg-[#1a1a1a]",
                     )}
                   >
-                    {active ? (
-                      <motion.span
-                        layoutId="workspace-nav-active"
-                        className="absolute inset-0 rounded-[20px] border border-primary/18 bg-primary/10 shadow-[inset_2px_0_0_#32d0ff]"
-                        transition={motionTokens.spring.soft}
-                      />
-                    ) : null}
                     <motion.span
-                      className={cx("relative z-10", active ? "text-primary" : "")}
-                      animate={active && !reduced ? { scale: [1, 1.06, 1] } : undefined}
-                      transition={createTransition(reduced, motionTokens.duration.fast)}
+                      className={cx("relative shrink-0")}
+                      animate={
+                        active && !reduced ? { scale: [1, 1.06, 1] } : undefined
+                      }
+                      transition={createTransition(
+                        reduced,
+                        motionTokens.duration.fast,
+                      )}
                     >
-                      <Icon size={18} />
+                      <Icon size={18} strokeWidth={active ? 2.5 : 2} />
                     </motion.span>
                     <AnimatePresence initial={false}>
                       {!collapsed ? (
                         <motion.span
-                          className="relative z-10"
+                          className="font-body font-medium text-sm tracking-wide whitespace-nowrap"
                           initial={{ opacity: 0, x: -4 }}
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: -6 }}
-                          transition={createTransition(reduced, motionTokens.duration.fast)}
+                          transition={createTransition(
+                            reduced,
+                            reduced ? 0.15 : 0.3,
+                          )}
                         >
                           {item.label}
                         </motion.span>
@@ -343,209 +311,238 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
             })}
           </motion.nav>
 
-          <motion.div className="mt-auto flex flex-col gap-4 border-t border-border pt-5">
-            <motion.div className={cx("flex items-center gap-3", collapsed && "justify-center")}>
-              <motion.div
-                className="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/70 bg-white/[0.03] font-display text-text-secondary"
-                whileHover={hoverLift}
-                transition={transition}
+          <div className={cx("p-6 mt-auto", collapsed && "px-2")}>
+            <motion.div
+              whileHover={hoverLift}
+              whileTap={press}
+              transition={transition}
+            >
+              <Link
+                href="/workspace/sessions"
+                onClick={() => setMobileNavOpen(false)}
+                className={cx(
+                  "flex items-center justify-center gap-2 cursor-pointer",
+                  "bg-gradient-to-br from-primary to-primary-container text-on-primary-fixed",
+                  "font-bold uppercase tracking-widest transition-all",
+                  "shadow-[0_0_15px_rgba(129,236,255,0.4)] hover:scale-[1.02] active:scale-95",
+                  collapsed
+                    ? "w-12 h-12 rounded-full mx-auto"
+                    : "w-full py-4 text-xs rounded-full",
+                )}
               >
-                {initials}
-              </motion.div>
-              <AnimatePresence initial={false}>
-                {!collapsed ? (
-                  <motion.div
-                    className="min-w-0 flex flex-col"
-                    initial={{ opacity: 0, y: -4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    transition={createTransition(reduced, motionTokens.duration.fast)}
-                  >
-                    <strong className="truncate text-sm font-display text-white">{displayName}</strong>
-                    <span className="truncate text-xs text-text-secondary">{user.email}</span>
-                  </motion.div>
-                ) : null}
-              </AnimatePresence>
+                {collapsed ? <Sparkles size={16} /> : "NOVA SESSÃO"}
+              </Link>
             </motion.div>
-
-            <AnimatePresence initial={false}>
-              {!collapsed ? (
-                <motion.div
-                  className="flex flex-col gap-4"
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 6 }}
-                  transition={createTransition(reduced, motionTokens.duration.fast)}
-                >
-                  <div className="flex items-center justify-between">
-                    <motion.div whileHover={hoverLift} whileTap={press} transition={transition}>
-                      <Link
-                        href="/workspace/settings"
-                        onClick={() => setMobileNavOpen(false)}
-                        className="rounded-full transition-[opacity,color] duration-200 hover:opacity-100"
-                        title="Abrir opções da conta"
-                      >
-                        <Pill tone={currentPlan === "free" ? "neutral" : "primary"}>
-                          {currentPlan}
-                        </Pill>
-                      </Link>
-                    </motion.div>
-
-                    <div className="mr-1 flex items-center gap-1">
-                      <motion.div whileHover={hoverLift} whileTap={press} transition={transition}>
-                        <Link
-                          href="/workspace/settings/billing"
-                          aria-label="Abrir billing"
-                          title="Abrir billing"
-                          onClick={() => setMobileNavOpen(false)}
-                          className={iconLinkClass}
-                        >
-                          <Sparkles size={14} />
-                        </Link>
-                      </motion.div>
-                      <motion.div whileHover={hoverLift} whileTap={press} transition={transition}>
-                        <Link
-                          href="/workspace/settings"
-                          aria-label="Abrir configurações"
-                          title="Abrir configurações"
-                          onClick={() => setMobileNavOpen(false)}
-                          className={iconLinkClass}
-                        >
-                          <Settings size={14} />
-                        </Link>
-                      </motion.div>
-                      <IconButton aria-label="Sair da conta" title="Sair da conta" onClick={() => void signOut()}>
-                        <LogOut size={14} />
-                      </IconButton>
-                    </div>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div
-                  className="flex flex-col gap-2"
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 6 }}
-                  transition={createTransition(reduced, motionTokens.duration.fast)}
-                >
-                  <motion.div whileHover={hoverLift} whileTap={press} transition={transition}>
-                    <Link
-                      href="/workspace/settings/billing"
-                      aria-label="Abrir billing"
-                      title="Abrir billing"
-                      className={cx(iconLinkClass, "w-10")}
-                    >
-                      <Sparkles size={16} />
-                    </Link>
-                  </motion.div>
-                  <motion.div whileHover={hoverLift} whileTap={press} transition={transition}>
-                    <Link
-                      href="/workspace/settings"
-                      aria-label="Abrir configurações"
-                      title="Abrir configurações"
-                      className={cx(iconLinkClass, "w-10")}
-                    >
-                      <Settings size={16} />
-                    </Link>
-                  </motion.div>
-                  <IconButton aria-label="Sair da conta" title="Sair da conta" className="w-10" onClick={() => void signOut()}>
-                    <LogOut size={16} />
-                  </IconButton>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
+          </div>
         </motion.aside>
 
-        <motion.main layout className="flex h-full min-w-0 flex-1 flex-col">
+        <motion.main
+          layout
+          className="flex h-[100dvh] min-w-0 flex-1 flex-col relative overflow-hidden"
+        >
+          {/* TopNavBar Anchor */}
           <motion.header
             layout
-            className="workspace-panel workspace-panel--muted z-20 mb-5 grid shrink-0 grid-cols-1 items-start gap-5 rounded-none border-x-0 border-t-0 p-5 md:rounded-2xl md:border-x md:border-t md:p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-8"
+            className="w-full sticky top-0 z-50 bg-surface-container-low/30 backdrop-blur-lg flex flex-col md:flex-row md:justify-between md:items-center px-4 py-4 md:px-8 shadow-[0_4px_12px_rgba(0,0,0,0.1)] gap-4 border-b border-outline-variant/5"
           >
-            <motion.div className="flex min-w-0 items-start gap-4 sm:gap-5" variants={fadeUpVariants(reduced, 12)}>
-              <IconButton
-                className="mt-0.5 shrink-0 md:hidden"
-                onClick={() => setMobileNavOpen(true)}
-                aria-label="Abrir sidebar"
-                title="Abrir sidebar"
+            <div className="flex items-center gap-4 md:gap-8">
+              <button
+                className="shrink-0 text-on-surface-variant hover:text-white transition-colors"
+                onClick={() => {
+                  if (window.innerWidth < 768) setMobileNavOpen(true);
+                  else setCollapsed(!collapsed);
+                }}
+                aria-label="Alternar sidebar"
+                title="Alternar sidebar"
               >
-                <Menu size={18} />
-              </IconButton>
-              <div className="flex min-w-0 flex-col gap-1.5">
-                <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-secondary">{dateLabel}</span>
-                  <motion.span
-                    className="h-1 w-1 rounded-full bg-primary/50"
-                    animate={reduced ? undefined : { scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
-                    transition={{ duration: 2.4, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
-                  />
-                  <motion.h2
-                    key={meta.title}
-                    className="m-0 text-lg font-display font-medium leading-none text-white"
-                    initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={createTransition(reduced, motionTokens.duration.fast)}
-                  >
+                <span className="md:hidden">
+                  <Menu size={18} />
+                </span>
+                <span className="hidden md:inline-block">
+                  <PanelLeft size={18} />
+                </span>
+              </button>
+
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-6">
+                <div className="hidden lg:block relative">
+                  <h2 className="text-xl font-bold tracking-tight text-white">
                     {meta.title}
-                  </motion.h2>
+                  </h2>
+                  <span className="text-[10px] uppercase tracking-widest text-primary font-bold">
+                    {dateLabel}
+                  </span>
                 </div>
-                <motion.p
-                  key={meta.subtitle}
-                  className="m-0 max-w-xl text-sm leading-relaxed text-text-secondary xl:max-w-2xl"
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={createTransition(reduced, motionTokens.duration.fast)}
-                >
-                  {meta.subtitle}
-                </motion.p>
+
+                {/* COMMAND SEARCH */}
+                <div className="relative group w-full md:w-80" ref={commandRef}>
+                  <Search
+                    size={16}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant transition-colors group-focus-within:text-primary z-10"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Buscar comando... (Pressione /)"
+                    onFocus={() => setCommandOpen(true)}
+                    className="bg-surface-container-low border border-outline-variant/10 rounded-full pl-10 pr-10 py-2 text-sm text-on-surface w-full outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all shadow-inner relative z-10"
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant text-[10px] font-bold bg-surface-container py-0.5 px-1.5 rounded border border-outline-variant/20 z-10">
+                    /
+                  </div>
+
+                  <AnimatePresence>
+                    {commandOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute top-full left-0 mt-2 w-full min-w-[240px] bg-surface-container-high/90 backdrop-blur-xl border border-outline-variant/20 rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.6)] overflow-hidden z-50 flex flex-col"
+                      >
+                        <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-primary border-b border-outline-variant/10 bg-surface-container-low">
+                          Acesso Rápido
+                        </div>
+                        <div className="flex flex-col py-2 max-h-[300px] overflow-y-auto scrollbar-hide">
+                          {navigationItems.map((item) => {
+                            const Icon = icons[item.icon as keyof typeof icons];
+                            return (
+                              <Link
+                                key={item.href}
+                                href={item.href}
+                                onClick={() => setCommandOpen(false)}
+                                className="flex items-center gap-3 px-4 py-2.5 text-sm text-on-surface-variant hover:text-primary hover:bg-primary/5 transition-colors"
+                              >
+                                <Icon size={16} />
+                                <span className="font-medium tracking-wide">
+                                  {item.label}
+                                </span>
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
-            </motion.div>
+            </div>
 
-            <motion.div
-              layout
-              className="flex w-full flex-wrap items-center gap-2.5 overflow-x-auto pb-1 lg:w-auto lg:justify-self-end lg:pb-0"
-            >
-              <motion.div
-                whileHover={hoverLift}
-                transition={transition}
-                className="flex min-w-[152px] flex-col gap-1 rounded-2xl border border-border/70 bg-white/[0.03] px-4 py-3"
+            <div className="flex items-center justify-end gap-3 md:gap-6 shrink-0">
+              {/* Quick Stats / Streak */}
+              <div className="hidden lg:flex items-center bg-surface-container-highest px-3 py-1.5 rounded-lg border border-outline-variant/10">
+                <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mr-2">
+                  Ofensiva
+                </span>
+                <Activity
+                  size={14}
+                  className="text-primary mr-1 drop-shadow-[0_0_8px_rgba(129,236,255,0.6)]"
+                />
+                <strong className="text-xs font-black text-white italic">
+                  {summary?.streakDays ?? 0}
+                </strong>
+              </div>
+
+              {/* Actions */}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => void reload()}
+                disabled={refreshing}
+                className="text-on-surface-variant hover:text-primary transition-all p-1 hidden sm:block"
+                title="Sincronizar"
               >
-                <span className="text-[9px] font-bold uppercase tracking-widest text-text-secondary">Consistência</span>
-                <div className="flex items-baseline">
-                  <strong className="font-display text-base leading-none text-white">{summary?.streakDays ?? 0} dias</strong>
-                </div>
-              </motion.div>
-              <motion.div whileHover={hoverLift} whileTap={press} transition={transition}>
-                <Link
-                  href="/workspace/settings"
-                  className="workspace-button workspace-button--secondary touch-target text-sm"
-                >
-                  <Settings size={14} />
-                  Ajustes
-                </Link>
-              </motion.div>
-
-              <PrimaryButton disabled={refreshing} onClick={() => void reload()}>
                 <motion.span
-                  animate={refreshing && !reduced ? { rotate: 360 } : { rotate: 0 }}
+                  animate={refreshing ? { rotate: 360 } : {}}
                   transition={
-                    refreshing && !reduced
-                      ? { duration: 1, ease: "linear", repeat: Number.POSITIVE_INFINITY }
-                      : createTransition(reduced, motionTokens.duration.fast)
+                    refreshing
+                      ? { duration: 1, ease: "linear", repeat: Infinity }
+                      : {}
                   }
-                  className="inline-flex"
                 >
-                  <RefreshCcw size={14} />
+                  <RefreshCcw size={18} />
                 </motion.span>
-                {operation?.key === "workspace-reload" ? "Sincronizando..." : "Sincronizar"}
-              </PrimaryButton>
-            </motion.div>
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setNotificationsOpen(true)}
+                className="relative text-on-surface-variant hover:text-primary transition-all p-1"
+                title="Notificações"
+              >
+                <Bell size={18} />
+                {data?.notifications && data.notifications.filter(n => !n.is_read).length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-error text-[9px] font-bold text-white rounded-full flex items-center justify-center">
+                    {data.notifications.filter(n => !n.is_read).length}
+                  </span>
+                )}
+              </motion.button>
+              <Link href="/workspace/settings" title="Configurações">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="text-on-surface-variant hover:text-primary transition-all p-1"
+                >
+                  <Settings size={18} />
+                </motion.button>
+              </Link>
+
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => void signOut()}
+                className="text-on-surface-variant hover:text-error transition-all p-1 hidden sm:block"
+                title="Sair"
+              >
+                <LogOut size={18} />
+              </motion.button>
+
+              <div className="w-px h-6 bg-outline-variant/20 mx-1"></div>
+
+              {/* User Avatar distinct */}
+              <div className="flex items-center gap-3">
+                <div className="hidden sm:flex flex-col items-end">
+                  <strong className="text-[11px] font-bold text-white uppercase tracking-wider">
+                    {displayName}
+                  </strong>
+                  <span className="text-[9px] text-primary tracking-widest uppercase">
+                    {currentPlan === "free" ? "ACESSO_BÁSICO" : "MEMBRO_PRO"}
+                  </span>
+                </div>
+                {data?.profile?.avatar_url ? (
+                  <img 
+                    src={data.profile.avatar_url} 
+                    alt="Avatar" 
+                    className="h-10 w-10 rounded-full object-cover border border-outline-variant/20 shadow-[0_0_10px_rgba(0,0,0,0.5)]"
+                  />
+                ) : (
+                  <div className="h-10 w-10 rounded-full bg-surface-container-highest border border-outline-variant/20 overflow-hidden flex items-center justify-center text-on-surface font-bold shadow-[0_0_10px_rgba(0,0,0,0.5)]">
+                    {initials}
+                  </div>
+                )}
+              </div>
+            </div>
           </motion.header>
 
-          <div className="relative flex-1 overflow-y-auto px-4 pb-10 sm:px-5 md:px-0 md:pb-0">
-            <motion.div layout className="relative">
-              {children}
-            </motion.div>
+          <div className="relative flex-1 overflow-y-auto overflow-x-hidden">
+            {showContent ? (
+              <motion.div
+                layout
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="relative p-4 sm:p-5 md:p-8 max-w-[1600px] mx-auto"
+              >
+                {children}
+              </motion.div>
+            ) : (
+              <div className="relative p-4 sm:p-5 md:p-8 max-w-[1600px] mx-auto">
+                <div className="flex items-center justify-center h-64">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-10 h-10 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                    <span className="text-sm text-on-surface-variant animate-pulse">Carregando...</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </motion.main>
 
@@ -564,10 +561,13 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={createTransition(reduced, motionTokens.duration.fast)}
+                transition={createTransition(
+                  reduced,
+                  motionTokens.duration.fast,
+                )}
               />
               <motion.div
-                className="glass-panel relative z-10 flex w-full max-w-lg flex-col gap-5 border border-primary/20 px-6 py-7 text-center shadow-[0_32px_80px_rgba(0,0,0,0.35)]"
+                className="relative z-10 flex w-full max-w-lg flex-col gap-5 border border-primary/20 bg-surface-container/90 px-6 py-8 text-center shadow-[0_32px_80px_rgba(0,0,0,0.6)] rounded-2xl backdrop-blur-xl"
                 variants={modalVariants(reduced)}
                 initial="hidden"
                 animate="visible"
@@ -580,30 +580,37 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
                       ? undefined
                       : {
                           boxShadow: [
-                            "0 0 0 rgba(50,208,255,0)",
-                            "0 0 0 12px rgba(50,208,255,0.08)",
-                            "0 0 0 rgba(50,208,255,0)",
+                            "0 0 0 rgba(129,236,255,0)",
+                            "0 0 0 15px rgba(129,236,255,0.15)",
+                            "0 0 0 rgba(129,236,255,0)",
                           ],
                         }
                   }
-                  transition={{ duration: 2.2, repeat: reduced ? 0 : Number.POSITIVE_INFINITY, ease: "easeOut" }}
+                  transition={{
+                    duration: 2.2,
+                    repeat: reduced ? 0 : Number.POSITIVE_INFINITY,
+                    ease: "easeOut",
+                  }}
                 >
-                  <LoaderCircle size={24} className="animate-spin text-primary" />
+                  <LoaderCircle
+                    size={24}
+                    className="animate-spin text-primary"
+                  />
                 </motion.div>
                 <div className="flex flex-col gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">
-                    Processando
+                  <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary">
+                    PROCESSANDO
                   </span>
-                  <strong className="font-display text-2xl text-white">
+                  <strong className="text-2xl font-black text-white uppercase tracking-wide">
                     {operation.title}
                   </strong>
-                  <p className="mx-auto max-w-md text-sm leading-relaxed text-text-secondary">
+                  <p className="mx-auto max-w-md text-sm leading-relaxed text-on-surface-variant font-medium">
                     {operation.message}
                   </p>
                 </div>
-                <div className="h-1.5 w-full overflow-hidden rounded-full border border-border/60 bg-white/[0.04]">
+                <div className="h-1 w-full overflow-hidden rounded-full border border-outline-variant/10 bg-white/[0.04] mt-2">
                   <motion.div
-                    className="h-full rounded-full bg-gradient-to-r from-primary via-[#7de7ff] to-accent"
+                    className="h-full rounded-full bg-gradient-to-r from-primary to-primary-fixed neon-glow"
                     animate={{ x: ["-100%", "100%"] }}
                     transition={{
                       duration: reduced ? 0.01 : 1.15,
@@ -615,6 +622,96 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
               </motion.div>
             </motion.div>
           ) : null}
+        </AnimatePresence>
+
+        {/* Notifications Modal */}
+        <AnimatePresence>
+          {notificationsOpen && (
+            <motion.div
+              className="fixed inset-0 z-[90] flex items-center justify-center p-4 sm:p-6"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <motion.div
+                className="absolute inset-0 bg-background/82 backdrop-blur-md"
+                onClick={() => setNotificationsOpen(false)}
+              />
+              <motion.div
+                className="relative z-10 flex w-full max-w-md flex-col gap-4 border border-primary/20 bg-surface-container/90 px-6 py-6 shadow-[0_32px_80px_rgba(0,0,0,0.6)] rounded-2xl backdrop-blur-xl max-h-[80vh] overflow-hidden"
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+              >
+                <div className="flex items-center justify-between pb-4 border-b border-outline-variant/10">
+                  <h2 className="text-lg font-bold text-white">Notificações</h2>
+                  <button
+                    onClick={() => setNotificationsOpen(false)}
+                    className="text-on-surface-variant hover:text-white transition-colors"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto space-y-2">
+                  {data?.notifications && data.notifications.length > 0 ? (
+                    <>
+                      <div className="flex justify-end pb-2">
+                        <button
+                          onClick={() => void markAllNotificationsAsRead()}
+                          className="text-xs text-primary hover:underline"
+                        >
+                          Marcar todas como lidas
+                        </button>
+                      </div>
+                      {data.notifications.map((notification) => (
+                        <div
+                          key={notification.id}
+                          onClick={() => {
+                            if (!notification.is_read) {
+                              void markNotificationAsRead(notification.id);
+                            }
+                          }}
+                          className={`p-3 rounded-lg border transition-colors cursor-pointer ${
+                            notification.is_read
+                              ? "bg-transparent border-transparent opacity-60"
+                              : "bg-surface-container-highest border-primary/20 hover:bg-surface-container-high"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-bold ${notification.is_read ? "text-on-surface-variant" : "text-white"}`}>
+                                {notification.title}
+                              </p>
+                              <p className="text-xs text-on-surface-variant mt-1 line-clamp-2">
+                                {notification.message}
+                              </p>
+                              <p className="text-[10px] text-on-surface-variant/60 mt-2">
+                                {new Date(notification.created_at).toLocaleDateString("pt-BR", {
+                                  day: "2-digit",
+                                  month: "short",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </p>
+                            </div>
+                            {!notification.is_read && (
+                              <div className="w-2 h-2 rounded-full bg-primary shrink-0 mt-2" />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Bell size={40} className="mx-auto text-on-surface-variant/30 mb-3" />
+                      <p className="text-sm text-on-surface-variant">Nenhuma notificação</p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
         </AnimatePresence>
       </motion.div>
     </LayoutGroup>

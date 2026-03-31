@@ -1,15 +1,12 @@
 "use client";
 
-import { GoogleAuthButton } from "@/app/components/auth/google-auth-button";
 import { EmbeddedCheckoutDialog } from "@/app/components/embedded-checkout-dialog";
-import { FeedbackMessage } from "@/app/components/ui/system-primitives";
-import { GhostButton, Pill, PrimaryButton } from "@/app/workspace/_components/workspace-ui";
 import { usePlanIntent } from "@/store/plan-intent-store";
 import {
   buildGoogleCallbackUrl,
   getAuthErrorMessage,
-  normalizeCheckoutReturnUrl,
   normalizeAuthNextPath,
+  normalizeCheckoutReturnUrl,
   parseAuthFlowTarget,
   parseAuthPlan,
 } from "@/utils/auth/oauth";
@@ -21,10 +18,8 @@ import {
   ArrowRight,
   Eye,
   EyeOff,
-  KeyRound,
   LoaderCircle,
-  ShieldCheck,
-  UserRound,
+  Mail,
 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -42,7 +37,7 @@ const planCatalog: Record<
   }
 > = {
   free: {
-    title: "Plano Free",
+    title: "Plano Gratuito",
     price: "R$ 0",
     cadence: "/mês",
     summary: "Base do workspace para organizar sua rotina e começar com clareza.",
@@ -117,7 +112,7 @@ export default function AuthPage() {
     const supabase = getSupabaseClient();
 
     if (!supabase) {
-      setErrorMsg("A autenticacao do Supabase ainda nao esta configurada neste ambiente.");
+      setErrorMsg("A autenticação do Supabase ainda não está configurada neste ambiente.");
       setIsLoading(false);
       return;
     }
@@ -136,7 +131,7 @@ export default function AuthPage() {
         }
 
         if (activePlan) {
-          await persistPlanIntent(supabase, activePlan, target, data.user?.id ?? null);
+          await persistPlanIntent(supabase, activePlan, data.user?.id ?? null);
         }
 
         if (activePlan === "pro" || activePlan === "founding") {
@@ -162,7 +157,7 @@ export default function AuthPage() {
       }
 
       if (activePlan && data.user?.id) {
-        await persistPlanIntent(supabase, activePlan, target, data.user.id);
+        await persistPlanIntent(supabase, activePlan, data.user.id);
       }
 
       if (data?.session) {
@@ -204,7 +199,7 @@ export default function AuthPage() {
     const supabase = getSupabaseClient();
 
     if (!supabase) {
-      throw new Error("A autenticacao do Supabase ainda nao esta configurada neste ambiente.");
+      throw new Error("A autenticação do Supabase ainda não está configurada neste ambiente.");
     }
 
     const checkout = await createCheckout(
@@ -225,7 +220,7 @@ export default function AuthPage() {
       return;
     }
 
-    throw new Error("Nao foi possivel abrir o checkout interno agora.");
+    throw new Error("Não foi possível abrir o checkout interno agora.");
   }
 
   async function handleGoogleAuth() {
@@ -236,7 +231,7 @@ export default function AuthPage() {
     const supabase = getSupabaseClient();
 
     if (!supabase) {
-      setErrorMsg("O login com Google ainda nao esta habilitado neste ambiente do CodeTrail.");
+      setErrorMsg("O login com Google ainda não está habilitado neste ambiente do CodeTrail.");
       setIsGoogleLoading(false);
       return;
     }
@@ -264,7 +259,7 @@ export default function AuthPage() {
       }
 
       if (!data.url) {
-        throw new Error("Nao foi possivel iniciar o login com Google.");
+        throw new Error("Não foi possível iniciar o login com Google.");
       }
     } catch (error) {
       setErrorMsg(getAuthErrorMessage(error));
@@ -274,13 +269,13 @@ export default function AuthPage() {
 
   async function confirmEmbeddedCheckout() {
     if (!embeddedCheckout) {
-      throw new Error("Nao foi possivel localizar a sessao de checkout.");
+      throw new Error("Não foi possível localizar a sessão de checkout.");
     }
 
     const supabase = getSupabaseClient();
 
     if (!supabase) {
-      throw new Error("A autenticacao do Supabase ainda nao esta configurada neste ambiente.");
+      throw new Error("A autenticação do Supabase ainda não está configurada neste ambiente.");
     }
 
     await waitForBillingActivation(supabase, embeddedCheckout.planCode);
@@ -293,191 +288,234 @@ export default function AuthPage() {
       return;
     }
 
-    router.push(target === "download" ? "/download/windows" : "/workspace/dashboard");
+    router.push("/workspace/dashboard");
     router.refresh();
   }
 
   return (
     <>
-      <main className="relative min-h-screen overflow-hidden bg-background font-ui">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(50,208,255,0.12),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(159,232,112,0.08),transparent_24%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:72px_72px] opacity-60 [mask-image:radial-gradient(circle_at_center,black_44%,transparent_88%)]" />
+      <main className="relative flex min-h-screen flex-col items-center justify-center overflow-x-hidden overflow-y-auto bg-transparent text-on-surface font-ui selection:bg-primary/30">
 
-        <div className="relative mx-auto flex min-h-screen w-full max-w-[1320px] items-center px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
-          <div className="glass-panel grid w-full overflow-hidden rounded-[30px] lg:grid-cols-[1.08fr_0.92fr]">
-            <section className="relative flex flex-col justify-center gap-8 border-b border-border/60 px-6 py-8 sm:px-8 sm:py-10 lg:border-b-0 lg:border-r lg:px-11 lg:py-11 xl:px-12 xl:py-12">
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-3 rounded-full border border-border/70 bg-white/[0.04] px-3 py-2">
-                  <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl border border-primary/20 bg-primary/10 shadow-[0_0_18px_rgba(50,208,255,0.16)]">
-                    <Image
-                      src={brandMark}
-                      alt="CodeTrail"
-                      width={40}
-                      height={40}
-                      className="h-full w-full object-cover"
-                      priority
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <strong className="font-display text-base tracking-tight text-white">CodeTrail</strong>
-                    <span className="text-[10px] uppercase tracking-[0.24em] text-primary/80">Acesso web</span>
-                  </div>
-                </div>
-                <span className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
-                  <ShieldCheck size={13} />
-                  Conta unificada
-                </span>
-              </div>
+        {/* Decorative Light Source */}
+        <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[800px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/5 blur-[120px]"></div>
 
-              <div className="flex max-w-2xl flex-col gap-6">
-                <span className="inline-flex w-fit items-center gap-2 rounded-full border border-border/70 bg-white/[0.03] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-text-secondary">
-                  Autenticação do workspace
-                </span>
-                <h1 className="m-0 max-w-2xl text-4xl font-display font-medium tracking-tight text-white sm:text-5xl lg:text-[3.45rem] lg:leading-[1.02]">
-                  Entre no CodeTrail com a mesma conta que move seu billing, progresso e rotina.
-                </h1>
-                <p className="m-0 max-w-xl text-base leading-relaxed text-text-secondary sm:text-lg">
-                  A autenticação conecta assinatura, trilhas, histórico e ambiente operacional. Sem telas paralelas, sem produto quebrado em partes.
-                </p>
-                {activePlanMeta ? (
-                  <div className="workspace-panel workspace-panel--muted flex max-w-xl flex-col gap-3 border-primary/18 p-5">
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <Pill tone="primary">{activePlanMeta.title}</Pill>
-                      <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-text-secondary">
-                        Checkout interno preservado
-                      </span>
-                    </div>
-                    <p className="m-0 text-sm leading-relaxed text-text-secondary">
-                      {activePlanMeta.summary}
-                    </p>
-                  </div>
-                ) : null}
-              </div>
-            </section>
-
-            <section className="flex flex-col justify-center bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] px-6 py-8 sm:px-8 sm:py-10 lg:px-11 lg:py-11 xl:px-12 xl:py-12">
-              <div className="mx-auto flex w-full max-w-xl flex-col gap-7 sm:gap-8">
-                <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
-                  <div className="flex flex-col gap-2">
-                    <h2 className="m-0 text-3xl font-display font-medium text-white">
-                      {isLogin ? "Acesse sua conta" : "Crie sua conta"}
-                    </h2>
-                    <p className="m-0 text-sm leading-relaxed text-text-secondary sm:text-base">
-                      {isLogin
-                        ? "Continue de onde parou e recupere seu ambiente de estudo."
-                        : "Entre no ecossistema CodeTrail com onboarding direto para o workspace."}
-                    </p>
-                  </div>
-                  {activePlanMeta ? <Pill tone="primary">{activePlanMeta.title}</Pill> : null}
-                </header>
-
-                {errorMsg ? (
-                  <FeedbackMessage
-                    tone="error"
-                    title="Falha na autenticação"
-                    message={errorMsg}
-                  />
-                ) : null}
-
-                {successMsg ? (
-                  <FeedbackMessage
-                    tone="success"
-                    title="Conta criada"
-                    message={successMsg}
-                  />
-                ) : null}
-
-                <div className="flex flex-col gap-4">
-                  <GoogleAuthButton
-                    label={isLogin ? "Entrar com Google" : "Criar conta com Google"}
-                    loading={isGoogleLoading}
-                    onClick={handleGoogleAuth}
-                  />
-                  <div className="flex items-center gap-3">
-                    <span className="h-px flex-1 bg-border/60" aria-hidden="true" />
-                    <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-text-secondary">
-                      ou continue com e-mail
-                    </span>
-                    <span className="h-px flex-1 bg-border/60" aria-hidden="true" />
-                  </div>
-                </div>
-
-                <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-                  <label className="workspace-label">
-                    <span>E-mail</span>
-                    <div className="relative flex items-center">
-                      <UserRound size={16} className="pointer-events-none absolute left-4 text-text-secondary" />
-                      <input
-                        name="email"
-                        type="email"
-                        required
-                        placeholder="voce@codetrail.site"
-                        className="input-shell pl-11"
-                      />
-                    </div>
-                  </label>
-
-                  <label className="workspace-label">
-                    <span>Senha</span>
-                    <div className="relative flex items-center">
-                      <KeyRound size={16} className="pointer-events-none absolute left-4 text-text-secondary" />
-                      <input
-                        name="password"
-                        type={showPassword ? "text" : "password"}
-                        required
-                        minLength={6}
-                        placeholder="Digite sua senha"
-                        className="input-shell pl-11 pr-12"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((v) => !v)}
-                        className="touch-target absolute right-2 inline-flex items-center justify-center rounded-full border border-transparent px-3 text-text-secondary transition-[color,background-color,border-color] duration-200 hover:border-border/70 hover:bg-white/[0.04] hover:text-white"
-                        aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                      >
-                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
-                  </label>
-
-                  <PrimaryButton type="submit" disabled={isLoading || isGoogleLoading} className="mt-2 w-full !min-h-[52px] text-sm">
-                    {isLoading ? (
-                      <>
-                        <LoaderCircle size={16} className="animate-spin" />
-                        Processando...
-                      </>
-                    ) : (
-                      <>
-                        {isLogin ? "Entrar no sistema" : "Criar acesso"}
-                        <ArrowRight size={16} />
-                      </>
-                    )}
-                  </PrimaryButton>
-                </form>
-
-                <div className="workspace-panel workspace-panel--muted flex flex-wrap items-center justify-between gap-4 rounded-[26px] px-5 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full border border-primary/25 bg-primary/10 text-primary">1</div>
-                    <div className="flex flex-col">
-                      <strong className="text-sm font-display text-white">Login e verificação</strong>
-                      <span className="text-xs text-text-secondary">Entrada segura na mesma conta do ecossistema.</span>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-text-secondary">Fluxo único</span>
-                </div>
-
-                <footer className="flex flex-col gap-4 border-t border-border/60 pt-6 sm:flex-row sm:items-center sm:justify-between">
-                  <span className="text-sm text-text-secondary">
-                    {isLogin ? "Ainda não tem conta?" : "Já possui acesso?"}
-                  </span>
-                  <GhostButton type="button" onClick={() => setIsLogin((v) => !v)}>
-                    {isLogin ? "Criar conta" : "Voltar para login"}
-                  </GhostButton>
-                </footer>
-              </div>
-            </section>
+        {/* Header — matches workspace sidebar logo block */}
+        <header className="fixed top-0 w-full z-50 flex justify-center items-center h-20 pointer-events-none">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-primary/20 bg-primary/10 shadow-[0_0_18px_rgba(50,208,255,0.14)] shrink-0">
+              <Image
+                src={brandMark}
+                alt="CodeTrail Logo"
+                width={34}
+                height={34}
+                className="h-full w-full object-cover"
+                priority
+              />
+            </div>
+            <div className="flex flex-col">
+              <strong className="text-xl font-bold text-primary tracking-tight uppercase">CodeTrail</strong>
+              <span className="text-[10px] text-on-surface-variant tracking-[0.2em] font-bold mt-0.5 uppercase">Terminal de Acesso</span>
+            </div>
           </div>
+        </header>
+
+        {/* Auth Form Canvas */}
+        <div className="relative z-10 w-full max-w-[440px] px-6 py-28 mb-10">
+
+          {/* Page Header — PageFrame eyebrow pattern */}
+          <div className="mb-8 flex flex-col gap-3">
+            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-border/70 bg-white/[0.03] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-primary">
+              TERMINAL_V1
+            </span>
+            <h1 className="m-0 text-3xl font-display font-bold tracking-tight text-white sm:text-4xl">
+              {isLogin ? "Acesso ao Workspace" : "Cadastro de Operador"}
+            </h1>
+            <p className="m-0 text-sm leading-relaxed text-text-secondary">
+              {isLogin ? "Insira suas credenciais para acessar o terminal de operação." : "Crie sua conta para iniciar sua jornada no sistema."}
+            </p>
+          </div>
+
+          <div className="h-px w-full bg-gradient-to-r from-primary/50 via-border/15 to-transparent mb-8" />
+
+          <section className="glass-panel p-7 sm:p-8 mb-8 w-full">
+
+            {errorMsg ? (
+              <div className="mb-6 rounded-[calc(var(--radius-field)-4px)] border border-error/50 bg-error/10 px-4 py-3 text-sm font-medium text-error">
+                {errorMsg}
+              </div>
+            ) : null}
+
+            {successMsg ? (
+              <div className="mb-6 rounded-[calc(var(--radius-field)-4px)] border border-success/50 bg-success/10 px-4 py-3 text-sm font-medium text-success shadow-[0_0_15px_rgba(53,211,154,0.1)]">
+                {successMsg}
+              </div>
+            ) : null}
+
+            {activePlanMeta && !isLogin ? (
+              <div className="mb-6 rounded-[calc(var(--radius-field)-4px)] border border-primary/20 bg-primary/10 p-4 shadow-[0_0_15px_rgba(129,236,255,0.05)]">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[9px] font-bold tracking-[0.18em] uppercase text-primary">{activePlanMeta.title}</span>
+                  <span className="text-xs font-bold text-white">{activePlanMeta.price}{activePlanMeta.cadence}</span>
+                </div>
+                <p className="mt-2 text-xs text-text-secondary leading-relaxed">
+                  Conclua seu cadastro inicial para carregar o módulo de checkout.
+                </p>
+              </div>
+            ) : null}
+
+            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+
+              {/* Email — workspace-label + input-shell */}
+              <label className="workspace-label group/field">
+                <span className="group-focus-within/field:text-primary transition-colors">
+                  Endereço de E-mail
+                </span>
+                <div className="relative">
+                  <input
+                    name="email"
+                    type="email"
+                    required
+                    placeholder="operador@codetrail.site"
+                    className="input-shell w-full pr-11"
+                  />
+                  <div className="absolute right-0 top-0 bottom-0 flex items-center pr-4 text-text-secondary group-focus-within/field:text-primary transition-colors pointer-events-none">
+                    <Mail size={16} />
+                  </div>
+                </div>
+              </label>
+
+              {/* Password — workspace-label + input-shell */}
+              <label className="workspace-label group/field">
+                <div className="flex justify-between items-center">
+                  <span className="group-focus-within/field:text-primary transition-colors">
+                    Senha de Acesso
+                  </span>
+                  {isLogin && (
+                    <a className="text-[10px] uppercase font-bold text-text-secondary hover:text-primary transition-colors tracking-widest" href="#">
+                      Esqueceu a senha?
+                    </a>
+                  )}
+                </div>
+                <div className="relative">
+                  <input
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    required
+                    minLength={6}
+                    placeholder="••••••••••••"
+                    className="input-shell w-full pr-11 tracking-widest"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-0 top-0 bottom-0 flex items-center pr-4 text-text-secondary group-focus-within/field:text-primary hover:!text-white transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+
+                {/* Password Strength — registration only */}
+                {!isLogin && (
+                  <div className="mt-1 space-y-2">
+                    <div className="flex justify-between items-center text-[10px] uppercase font-bold tracking-widest text-text-secondary">
+                      <span>Força da Senha</span>
+                      <span className="text-primary">Ótima</span>
+                    </div>
+                    <div className="h-1 w-full bg-surface-container-highest rounded-full overflow-hidden flex gap-1">
+                      <div className="h-full w-1/4 bg-primary rounded-full shadow-[0_0_15px_rgba(129,236,255,0.4)]"></div>
+                      <div className="h-full w-1/4 bg-primary rounded-full shadow-[0_0_15px_rgba(129,236,255,0.4)]"></div>
+                      <div className="h-full w-1/4 bg-primary rounded-full shadow-[0_0_15px_rgba(129,236,255,0.4)]"></div>
+                      <div className="h-full w-1/4 bg-surface-container-highest rounded-full"></div>
+                    </div>
+                  </div>
+                )}
+              </label>
+
+              {/* Submit — workspace-button--primary */}
+              <button
+                type="submit"
+                disabled={isLoading || isGoogleLoading}
+                className="workspace-button workspace-button--primary w-full !rounded-[var(--radius-field)] text-xs uppercase tracking-[0.18em] mt-2 group/btn"
+              >
+                {isLoading ? (
+                  <LoaderCircle size={18} className="animate-spin text-on-primary-fixed" />
+                ) : (
+                  <>
+                    {isLogin ? "Autorizar Acesso" : "Criar Conta"}
+                    <ArrowRight size={16} className="group-hover/btn:translate-x-1 transition-transform" />
+                  </>
+                )}
+              </button>
+            </form>
+
+            {/* Divider */}
+            <div className="flex items-center my-7">
+              <div className="flex-grow h-px bg-outline-variant/30"></div>
+              <span className="px-4 text-[10px] text-text-secondary font-bold uppercase tracking-[0.2em]">Conexão Externa</span>
+              <div className="flex-grow h-px bg-outline-variant/30"></div>
+            </div>
+
+            {/* Google — workspace-button--secondary */}
+            <button
+              type="button"
+              disabled={isGoogleLoading || isLoading}
+              onClick={handleGoogleAuth}
+              className="workspace-button workspace-button--secondary w-full !rounded-[var(--radius-field)] group"
+            >
+              {isGoogleLoading ? (
+                <LoaderCircle size={18} className="animate-spin text-on-surface" />
+              ) : (
+                <>
+                  <svg className="w-5 h-5 group-hover:opacity-100 opacity-90 transition-opacity" viewBox="0 0 24 24">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.27.81-.57z" fill="#FBBC05"></path>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 12-4.53z" fill="#EA4335"></path>
+                  </svg>
+                  <span className="text-[11px] uppercase font-bold tracking-[0.18em] text-on-surface group-hover:text-primary transition-colors">
+                    {isLogin ? "Continuar com Google" : "Cadastrar com Google"}
+                  </span>
+                </>
+              )}
+            </button>
+
+            {/* Toggle login/register */}
+            <div className="mt-7 text-center">
+              <p className="text-text-secondary text-sm font-medium">
+                {isLogin ? "Ainda não possui conta?" : "Já possui uma conta?"}
+                <button type="button" onClick={() => setIsLogin((v) => !v)} className="text-primary hover:underline underline-offset-4 ml-2 font-bold uppercase tracking-widest text-[10px] hover:text-primary-strong transition-colors">
+                  {isLogin ? "Cadastre-se" : "Fazer Login"}
+                </button>
+              </p>
+            </div>
+          </section>
+
+          {/* Trust Metrics — workspace-panel pattern */}
+          {!isLogin && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="workspace-panel workspace-panel--interactive p-4 pb-5 flex flex-col justify-center">
+                <div className="text-primary font-black font-display text-2xl tracking-tighter drop-shadow-[0_0_12px_rgba(129,236,255,0.4)]">99.9%</div>
+                <div className="text-[10px] text-text-secondary uppercase font-bold tracking-wider mt-0.5">SLA do Sistema</div>
+              </div>
+              <div className="workspace-panel workspace-panel--interactive p-4 pb-5 flex flex-col justify-center">
+                <div className="text-primary font-black font-display text-2xl tracking-tighter drop-shadow-[0_0_12px_rgba(129,236,255,0.4)]">AES-256</div>
+                <div className="text-[10px] text-text-secondary uppercase font-bold tracking-wider mt-0.5">Criptografia Local</div>
+              </div>
+            </div>
+          )}
+
         </div>
+
+        <footer className="w-full py-8 px-12 flex flex-col md:flex-row justify-between items-center bg-transparent relative z-20">
+          <span className="text-[10px] uppercase tracking-widest text-text-secondary mb-4 md:mb-0 font-bold opacity-60">
+            © 2025 CodeTrail Lab. Acesso Exclusivo.
+          </span>
+          <div className="flex gap-6 opacity-60">
+            <a className="text-[10px] uppercase tracking-widest font-bold text-text-secondary hover:text-primary transition-all duration-200 hover:opacity-100" href="#">Política de Privacidade</a>
+            <a className="text-[10px] uppercase tracking-widest font-bold text-text-secondary hover:text-primary transition-all duration-200 hover:opacity-100" href="#">Termos de Uso</a>
+            <a className="text-[10px] uppercase tracking-widest font-bold text-text-secondary hover:text-primary transition-all duration-200 hover:opacity-100" href="#">Status da API</a>
+          </div>
+        </footer>
       </main>
 
       <EmbeddedCheckoutDialog
@@ -507,7 +545,6 @@ function buildBillingReturnUrl(checkoutReturnTo?: string | null) {
 async function persistPlanIntent(
   supabase: ReturnType<typeof createClient>,
   selectedPlan: BillingPlanCode,
-  target: "workspace" | "download",
   userId?: string | null,
 ) {
   const resolvedUserId = userId ?? (await supabase.auth.getUser()).data.user?.id ?? null;
@@ -520,7 +557,7 @@ async function persistPlanIntent(
     userId: resolvedUserId,
     selectedPlan,
     source: "web_auth",
-    platformInterest: target === "download" ? "windows" : "web",
+    platformInterest: "web",
   });
 }
 

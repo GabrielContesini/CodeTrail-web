@@ -8,6 +8,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import {
   cancelSubscription,
+  completeTrackJourney,
+  completeTrackTimelineStep,
   createCheckout,
   createPortalSession,
   deleteFlashcardRow,
@@ -31,6 +33,13 @@ import {
   saveSessionRow,
   saveSettingsRow,
   saveTaskRow,
+  saveNotificationRow,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  deleteNotificationRow,
+  pauseTrackJourney,
+  resumeTrackJourney,
+  startTrackJourney,
   syncBillingSubscription,
   waitForBillingActivation,
 } from "@/utils/workspace/api";
@@ -60,7 +69,7 @@ import type {
 } from "@/utils/workspace/types";
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
-const MIN_OPERATION_MODAL_MS = 450;
+const MIN_OPERATION_MODAL_MS = 800;
 
 export function WorkspaceProvider({
   initialUser,
@@ -212,11 +221,14 @@ export function WorkspaceProvider({
   async function runMutation(
     action: () => Promise<void>,
     nextOperation: WorkspaceOperationState = genericMutationOperation(),
+    reloadAfter = true,
   ) {
     try {
       await withOperation(nextOperation, async () => {
         await action();
-        await fetchWorkspaceSnapshot();
+        if (reloadAfter) {
+          await fetchWorkspaceSnapshot();
+        }
       });
     } catch (nextError) {
       const message =
@@ -237,7 +249,11 @@ export function WorkspaceProvider({
       created_at: base.created_at || now,
       updated_at: now,
     };
-    await runMutation(() => saveProfileRow(supabase, row), saveOperation("perfil"));
+    await runMutation(async () => {
+      await saveProfileRow(supabase, row);
+      const result = await loadWorkspaceData(supabase, initialUser.id);
+      applyWorkspaceResult(result);
+    }, saveOperation("perfil"));
   }
 
   async function saveGoal(payload: Partial<UserGoalRow>) {
@@ -260,44 +276,30 @@ export function WorkspaceProvider({
     const row: AppSettingsRow = {
       ...base,
       ...payload,
-      id: base.id || initialUser.id,
+      id: base.id,
       user_id: initialUser.id,
       created_at: base.created_at || now,
       updated_at: now,
     };
-    await runMutation(() => saveSettingsRow(supabase, row), saveOperation("preferencias"));
+    await runMutation(() => saveSettingsRow(supabase, row), saveOperation("preferencias"), false);
   }
 
   async function saveSession(payload: Partial<StudySessionRow>) {
     const existing = data?.sessions.find((item) => item.id === payload.id);
     const now = nowIso();
-    const startTime = payload.start_time ?? existing?.start_time ?? now;
-    const duration =
-      payload.duration_minutes ?? existing?.duration_minutes ?? 50;
     const row: StudySessionRow = {
+      ...existing!,
+      ...payload,
       id: payload.id ?? existing?.id ?? randomId(),
       user_id: initialUser.id,
-      track_id: payload.track_id ?? existing?.track_id ?? null,
-      skill_id: payload.skill_id ?? existing?.skill_id ?? null,
-      module_id: payload.module_id ?? existing?.module_id ?? null,
-      type: payload.type ?? existing?.type ?? "practice",
-      start_time: startTime,
-      end_time:
-        payload.end_time ??
-        existing?.end_time ??
-        new Date(new Date(startTime).getTime() + duration * 60000).toISOString(),
-      duration_minutes: duration,
-      notes: payload.notes ?? existing?.notes ?? "",
-      productivity_score:
-        payload.productivity_score ?? existing?.productivity_score ?? 4,
       created_at: existing?.created_at ?? now,
       updated_at: now,
     };
-    await runMutation(() => saveSessionRow(supabase, row), saveOperation("sessao"));
+    await runMutation(() => saveSessionRow(supabase, row), saveOperation("sessao"), true);
   }
 
   async function deleteSession(id: string) {
-    await runMutation(() => deleteSessionRow(supabase, id), deleteOperation("sessao"));
+    await runMutation(() => deleteSessionRow(supabase, id), deleteOperation("sessao"), true);
   }
 
   async function saveTask(payload: Partial<TaskRow>) {
@@ -314,18 +316,15 @@ export function WorkspaceProvider({
       priority: payload.priority ?? existing?.priority ?? "medium",
       status,
       due_date: payload.due_date ?? existing?.due_date ?? null,
-      completed_at:
-        status === "completed"
-          ? payload.completed_at ?? existing?.completed_at ?? now
-          : null,
+      completed_at: status === "completed" ? payload.completed_at ?? existing?.completed_at ?? now : null,
       created_at: existing?.created_at ?? now,
       updated_at: now,
     };
-    await runMutation(() => saveTaskRow(supabase, row), saveOperation("tarefa"));
+    await runMutation(() => saveTaskRow(supabase, row), saveOperation("tarefa"), false);
   }
 
   async function deleteTask(id: string) {
-    await runMutation(() => deleteTaskRow(supabase, id), deleteOperation("tarefa"));
+    await runMutation(() => deleteTaskRow(supabase, id), deleteOperation("tarefa"), false);
   }
 
   async function saveReview(payload: Partial<ReviewRow>) {
@@ -424,6 +423,66 @@ export function WorkspaceProvider({
     }, deleteOperation("etapa do projeto"));
   }
 
+  async function syncSelectedTrack(trackId: string) {
+    const base = data?.profile ?? defaultProfile(initialUser);
+    if (base.selected_track_id === trackId) {
+      return;
+    }
+
+    const now = nowIso();
+    const row: ProfileRow = {
+      ...base,
+      id: initialUser.id,
+      email: base.email ?? initialUser.email,
+      created_at: base.created_at || now,
+      updated_at: now,
+      selected_track_id: trackId,
+    };
+
+    await saveProfileRow(supabase, row);
+  }
+
+  async function selectTrack(trackId: string) {
+    await runMutation(async () => {
+      await syncSelectedTrack(trackId);
+    }, trackOperation("Definindo trilha em estudo", "Atualizando sua trilha principal para centralizar o foco do roadmap atual."));
+  }
+
+  async function startTrack(trackId: string) {
+    await runMutation(async () => {
+      await startTrackJourney(supabase, trackId);
+      await syncSelectedTrack(trackId);
+    }, trackOperation("Iniciando trilha", "Liberando a primeira etapa e preparando a execucao do roadmap."));
+  }
+
+  async function pauseTrack(trackId: string) {
+    await runMutation(
+      () => pauseTrackJourney(supabase, trackId),
+      trackOperation("Pausando trilha", "Preservando o ponto atual para voce retomar exatamente daqui depois."),
+    );
+  }
+
+  async function resumeTrack(trackId: string) {
+    await runMutation(async () => {
+      await resumeTrackJourney(supabase, trackId);
+      await syncSelectedTrack(trackId);
+    }, trackOperation("Retomando trilha", "Reabrindo a etapa atual e atualizando o estado do roadmap em tempo real."));
+  }
+
+  async function completeTrackStep(trackId: string) {
+    await runMutation(
+      () => completeTrackTimelineStep(supabase, trackId),
+      trackOperation("Concluindo etapa", "Finalizando a etapa atual, calculando o progresso e liberando o proximo bloco."),
+    );
+  }
+
+  async function completeTrack(trackId: string) {
+    await runMutation(
+      () => completeTrackJourney(supabase, trackId),
+      trackOperation("Concluindo trilha", "Fechando o roadmap atual e registrando o marco final da trilha."),
+    );
+  }
+
   async function saveNote(payload: Partial<StudyNoteRow>) {
     const existing = data?.notes.find((item) => item.id === payload.id);
     const now = nowIso();
@@ -433,6 +492,9 @@ export function WorkspaceProvider({
       folder_name: payload.folder_name ?? existing?.folder_name ?? "Geral",
       title: payload.title ?? existing?.title ?? "Nova nota",
       content: payload.content ?? existing?.content ?? "",
+      track_id: payload.track_id ?? existing?.track_id ?? null,
+      module_id: payload.module_id ?? existing?.module_id ?? null,
+      project_id: payload.project_id ?? existing?.project_id ?? null,
       created_at: existing?.created_at ?? now,
       updated_at: now,
     };
@@ -498,7 +560,46 @@ export function WorkspaceProvider({
     grade: "again" | "hard" | "good" | "easy",
   ) {
     const updated = applyFlashcardReview(flashcard, grade);
-    await runMutation(() => saveFlashcardRow(supabase, updated), reviewOperation());
+    await runMutation(() => saveFlashcardRow(supabase, updated), reviewOperation(), false);
+  }
+
+  async function markNotificationAsReadAction(notificationId: string) {
+    await runMutation(
+      () => markNotificationAsRead(supabase, notificationId),
+      genericMutationOperation(),
+      false,
+    );
+    // Atualiza localmente sem reload completo
+    setData((prev) => prev ? {
+      ...prev,
+      notifications: prev.notifications.map(n => 
+        n.id === notificationId ? { ...n, is_read: true, read_at: new Date().toISOString() } : n
+      )
+    } : prev);
+  }
+
+  async function markAllNotificationsAsReadAction() {
+    await runMutation(
+      () => markAllNotificationsAsRead(supabase, initialUser.id),
+      genericMutationOperation(),
+      false,
+    );
+    setData((prev) => prev ? {
+      ...prev,
+      notifications: prev.notifications.map(n => ({ ...n, is_read: true, read_at: new Date().toISOString() }))
+    } : prev);
+  }
+
+  async function deleteNotificationAction(id: string) {
+    await runMutation(
+      () => deleteNotificationRow(supabase, id),
+      deleteOperation("notificação"),
+      false,
+    );
+    setData((prev) => prev ? {
+      ...prev,
+      notifications: prev.notifications.filter(n => n.id !== id)
+    } : prev);
   }
 
   async function refreshBilling() {
@@ -679,8 +780,14 @@ export function WorkspaceProvider({
     deleteReview,
     saveProject,
     deleteProject,
-    saveProjectStep,
-    deleteProjectStep,
+      saveProjectStep,
+      deleteProjectStep,
+      selectTrack,
+      startTrack,
+      pauseTrack,
+    resumeTrack,
+    completeTrackStep,
+    completeTrack,
     saveNote,
     deleteNote,
     saveFlashcard,
@@ -688,6 +795,9 @@ export function WorkspaceProvider({
     saveMindMap,
     deleteMindMap,
     reviewFlashcard,
+    markNotificationAsRead: markNotificationAsReadAction,
+    markAllNotificationsAsRead: markAllNotificationsAsReadAction,
+    deleteNotification: deleteNotificationAction,
     refreshBilling,
     createCheckout: handleCheckout,
     openPortal,
@@ -755,6 +865,14 @@ function deleteOperation(subject: string): WorkspaceOperationState {
     key: "workspace-mutation",
     title: `Removendo ${subject}`,
     message: `Excluindo ${subject} e sincronizando o workspace logo em seguida.`,
+  };
+}
+
+function trackOperation(title: string, message: string): WorkspaceOperationState {
+  return {
+    key: "track-timeline",
+    title,
+    message,
   };
 }
 
@@ -860,6 +978,7 @@ function defaultProfile(user: WorkspaceUser): ProfileRow {
   return {
     id: user.id,
     full_name: user.fullName || "Seu workspace",
+    avatar_url: null,
     email: user.email,
     desired_area: "Tecnologia",
     current_level: "beginner",

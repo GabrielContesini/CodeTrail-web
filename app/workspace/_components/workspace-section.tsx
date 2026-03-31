@@ -32,7 +32,7 @@ export function WorkspaceSection({ section }: { section: WorkspaceSectionKey }) 
     return (
       <PageFrame
         title="Inicializando workspace"
-        subtitle="Estabelecendo conexão segura com o backend remoto..."
+        subtitle="Estabelecendo conexão segura com a base de dados do seu workspace..."
       >
         <div className="flex flex-col gap-5 py-6 sm:gap-6 sm:py-8">
           <LoadingState

@@ -1,0 +1,1 @@
+app/workspace/_components/pages/tasks-page.tsx(16,48): error TS2305: Module '"@/app/components/ui/motion-system"' has no exported member 'hoverLift'.

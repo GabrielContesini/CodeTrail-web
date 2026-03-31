@@ -1,0 +1,4 @@
+app/workspace/_components/pages/analytics-page.tsx(344,11): error TS2322: Type '{ initial: { scale: number; opacity: number; }; whileInView: { scale: number; opacity: number; }; viewport: { once: true; }; transition: { duration: number; type: "spring"; }; originX: number; originY: number; fill: string; points: string; stroke: string; strokeWidth: string; }' is not assignable to type 'IntrinsicAttributes & SVGMotionProps<SVGPolygonElement> & RefAttributes<SVGPolygonElement>'.
+  Property 'originX' does not exist on type 'IntrinsicAttributes & SVGMotionProps<SVGPolygonElement> & RefAttributes<SVGPolygonElement>'. Did you mean 'origin'?
+app/workspace/_components/pages/billing-page.tsx(491,28): error TS2304: Cannot find name 'Check'.
+app/workspace/_components/pages/reviews-page.tsx(180,30): error TS2304: Cannot find name 'Pencil'.

@@ -29,12 +29,12 @@ describe("OAuth helpers", () => {
       buildGoogleCallbackUrl({
         origin: "http://localhost:3001",
         plan: "founding",
-        target: "download",
+        target: "workspace",
         nextPath: "/workspace/settings",
         source: "page",
       }),
     ).toBe(
-      "http://localhost:3001/auth/callback?plan=founding&target=download&next=%2Fworkspace%2Fsettings&source=page",
+      "http://localhost:3001/auth/callback?plan=founding&next=%2Fworkspace%2Fsettings&source=page",
     );
   });
 
@@ -42,12 +42,12 @@ describe("OAuth helpers", () => {
     expect(
       buildAuthErrorRedirect({
         plan: "free",
-        target: "download",
+        target: "workspace",
         nextPath: "/workspace/dashboard",
         message: "Falha ao autenticar.",
       }),
     ).toBe(
-      "/auth?plan=free&target=download&next=%2Fworkspace%2Fdashboard&auth_error=Falha+ao+autenticar.",
+      "/auth?plan=free&next=%2Fworkspace%2Fdashboard&auth_error=Falha+ao+autenticar.",
     );
   });
 

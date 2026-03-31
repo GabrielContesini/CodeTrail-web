@@ -1,0 +1,3 @@
+app/workspace/_components/workspace-shell.tsx(175,44): error TS2353: Object literal may only specify known properties, and 'w' does not exist in type 'string[] | TargetAndTransition'.
+app/workspace/_components/workspace-shell.tsx(176,44): error TS2353: Object literal may only specify known properties, and 'w' does not exist in type 'string[] | TargetAndTransition | LegacyAnimationControls'.
+app/workspace/_components/workspace-shell.tsx(177,41): error TS2353: Object literal may only specify known properties, and 'w' does not exist in type 'string[] | TargetAndTransition'.

@@ -62,12 +62,36 @@ export async function cancelSubscriptionOnServer(request: Request, requestId?: s
 }
 
 export async function syncBillingOnServer(request: Request, requestId?: string) {
-  return await invokeBillingFunctionOnServer<{ snapshot?: BillingSnapshot; status?: string }>(
-    request,
-    BILLING_FUNCTIONS.sync,
-    {},
-    requestId,
-  );
+  try {
+    return await invokeBillingFunctionOnServer<{ snapshot?: BillingSnapshot; status?: string }>(
+      request,
+      BILLING_FUNCTIONS.sync,
+      {},
+      requestId,
+    );
+  } catch (error) {
+    if (error instanceof BillingServiceError && error.status === 404) {
+      const snapshot = await getBillingSnapshotOnServer(request, requestId);
+
+      logServerEvent({
+        area: "billing",
+        event: "sync_function_missing_snapshot_fallback",
+        level: "warn",
+        requestId,
+        metadata: {
+          message: error.message,
+          functionName: BILLING_FUNCTIONS.sync,
+        },
+      });
+
+      return {
+        snapshot,
+        status: "snapshot_only",
+      };
+    }
+
+    throw error;
+  }
 }
 
 export async function getBillingSnapshotOnServer(request: Request, requestId?: string) {
@@ -103,8 +127,41 @@ export function parseBillingUiMode(value: unknown): "hosted" | "embedded" {
   return value === "embedded" ? "embedded" : "hosted";
 }
 
+const ALLOWED_ORIGINS = new Set([
+  "https://codetrail.com",
+  "https://app.codetrail.com",
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:3001",
+]);
+
+if (process.env.NEXT_PUBLIC_CODETRAIL_LANDING_URL) {
+  try {
+    ALLOWED_ORIGINS.add(new URL(process.env.NEXT_PUBLIC_CODETRAIL_LANDING_URL).origin);
+  } catch {}
+}
+
+if (process.env.APP_DASHBOARD_URL) {
+  try {
+    ALLOWED_ORIGINS.add(new URL(process.env.APP_DASHBOARD_URL).origin);
+  } catch {}
+}
+
 export function parseReturnUrl(value: unknown) {
-  return typeof value === "string" && value.trim().length > 0 ? value : null;
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return null;
+  }
+
+  try {
+    const url = new URL(value);
+    if (!ALLOWED_ORIGINS.has(url.origin)) {
+      return null;
+    }
+    return value;
+  } catch {
+    return null;
+  }
 }
 
 export function getBillingServiceErrorDetails(error: unknown) {

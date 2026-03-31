@@ -10,12 +10,34 @@ import {
   syncBillingOnServer,
 } from "@/utils/server/billing-service";
 import { createRequestId, logServerEvent } from "@/utils/server/observability";
+import { checkRateLimit, getClientIp } from "@/utils/server/rate-limit";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function GET(request: NextRequest) {
   const requestId = createRequestId();
+
+  const rateLimit = checkRateLimit({
+    namespace: "billing",
+    key: getClientIp(request),
+    limit: 30,
+    windowMs: 60 * 1000,
+  });
+
+  if (!rateLimit.allowed) {
+    return jsonApiResponse(
+      { error: "Too many requests" },
+      {
+        status: 429,
+        requestId,
+        cacheControl: PRIVATE_NO_STORE_CACHE_CONTROL,
+        headers: {
+          "Retry-After": String(rateLimit.retryAfterSeconds),
+        },
+      },
+    );
+  }
 
   try {
     const plan = parseBillingPlanCode(request.nextUrl.searchParams.get("plan"));

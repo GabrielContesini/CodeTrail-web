@@ -74,7 +74,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
       const nextRoute =
         selectedPlan && !authResult.isSignup && selectedPlan !== "free"
           ? `/workspace/settings/billing?checkout=${selectedPlan}`
-          : "/download/windows";
+          : "/workspace/dashboard";
 
       await maybeSendWelcomeEmail(selectedPlan);
       clearIntent();
@@ -107,7 +107,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
           redirectTo: buildGoogleCallbackUrl({
             origin: window.location.origin,
             plan: selectedPlan,
-            target: "download",
+            target: "workspace",
             source: "modal",
           }),
           queryParams: {

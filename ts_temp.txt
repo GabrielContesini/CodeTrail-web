@@ -1,0 +1,2 @@
+app/workspace/_components/workspace-shell.tsx(3,10): error TS2305: Module '"@/app/components/ui/motion-system"' has no exported member 'Command'.
+app/workspace/_components/workspace-shell.tsx(3,20): error TS2305: Module '"@/app/components/ui/motion-system"' has no exported member 'PanelLeft'.

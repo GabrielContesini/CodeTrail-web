@@ -1,13 +1,12 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
-import { FeedbackMessage, ActionButton, FormField } from "@/app/components/ui/system-primitives";
 import {
   createTransition,
-  modalVariants,
+  fadeUpVariants,
   useMotionPreferences,
   useStableReducedMotion,
 } from "@/app/components/ui/motion-system";
+import { FeedbackMessage } from "@/app/components/ui/system-primitives";
 import { createClient, hasSupabaseClientEnv } from "@/utils/supabase/client";
 import {
   sanitizeSupportInput,
@@ -16,6 +15,7 @@ import {
   type SupportFieldErrorMap,
   type SupportOrigin,
 } from "@/utils/support/shared";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   LifeBuoy,
   LoaderCircle,
@@ -183,10 +183,10 @@ export function SupportWidget({
 
       const result = (await response.json().catch(() => null)) as
         | {
-            error?: string;
-            fieldErrors?: SupportFieldErrorMap;
-            message?: string;
-          }
+          error?: string;
+          fieldErrors?: SupportFieldErrorMap;
+          message?: string;
+        }
         | null;
 
       if (!response.ok) {
@@ -238,16 +238,21 @@ export function SupportWidget({
       <motion.button
         type="button"
         onClick={() => setOpen(true)}
+        initial="hidden"
+        animate="visible"
         whileHover={hoverLift}
         whileTap={press}
-        transition={transition}
-        className="fixed bottom-[max(1rem,calc(env(safe-area-inset-bottom)+0.5rem))] right-[max(1rem,calc(env(safe-area-inset-right)+0.5rem))] z-[60] inline-flex min-h-[56px] items-center gap-3 rounded-full border border-primary/24 bg-[rgba(9,17,24,0.92)] px-4 py-3 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-[border-color,background-color,box-shadow] duration-200 hover:border-primary/40 hover:bg-[rgba(12,22,31,0.96)] hover:shadow-[0_22px_46px_rgba(0,0,0,0.34)]"
+        variants={{
+          hidden: { y: 20, opacity: 0 },
+          visible: { y: 0, opacity: 1, transition: { delay: 0.5, ...transition } }
+        }}
+        className="fixed bottom-[max(1.5rem,calc(env(safe-area-inset-bottom)+1.5rem))] right-[max(1.5rem,calc(env(safe-area-inset-right)+1.5rem))] z-[60] workspace-button workspace-button--secondary !rounded-full !px-2 !py-2 !pr-5 !min-h-[48px] !gap-3 shadow-[0_0_25px_rgba(129,236,255,0.12)] hover:shadow-[0_0_35px_rgba(129,236,255,0.25)] hover:!border-primary/50"
         aria-label="Abrir suporte"
       >
-        <span className="flex h-10 w-10 items-center justify-center rounded-full border border-primary/16 bg-primary/12 text-primary">
-          <LifeBuoy size={18} />
+        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary border border-primary/20">
+          <LifeBuoy size={16} />
         </span>
-        <span className="hidden sm:inline">Suporte</span>
+        <span className="hidden sm:block text-[10px] font-bold uppercase tracking-[0.18em]">Suporte CT</span>
       </motion.button>
 
       <AnimatePresence>
@@ -262,7 +267,7 @@ export function SupportWidget({
             <motion.button
               type="button"
               aria-label="Fechar modal de suporte"
-              className="absolute inset-0 bg-background/86 backdrop-blur-sm"
+              className="absolute inset-0 bg-background/80 backdrop-blur-md"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -274,42 +279,43 @@ export function SupportWidget({
               role="dialog"
               aria-modal="true"
               aria-labelledby="support-modal-title"
-              className="glass-panel relative z-10 flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden border border-primary/20"
+              className="relative z-10 flex max-h-[90vh] w-full max-w-xl flex-col glass-panel !rounded-2xl overflow-hidden shadow-2xl"
               initial="hidden"
               animate="visible"
               exit="exit"
-              variants={modalVariants(reducedMotion)}
+              variants={fadeUpVariants(reducedMotion, 12)}
             >
-              <header className="flex items-start justify-between gap-4 border-b border-border/50 bg-surface/72 px-6 py-5 sm:px-7">
-                <div className="flex min-w-0 flex-col gap-2">
-                  <span className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/24 bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
-                    <Sparkles size={13} />
-                    Suporte CodeTrail
+              <div className="absolute -top-32 -left-32 w-80 h-80 bg-primary/10 rounded-full blur-[100px] pointer-events-none" />
+
+              <header className="flex items-start justify-between gap-4 border-b border-outline-variant/10 px-6 py-6 sm:px-8 relative z-10">
+                <div className="flex flex-col gap-2">
+                  <span className="inline-flex w-fit items-center gap-2 rounded text-[9px] font-bold uppercase tracking-[0.2em] text-primary">
+                    <Sparkles size={12} />
+                    Central de Atendimento
                   </span>
                   <div>
-                    <h2 id="support-modal-title" className="m-0 text-2xl font-display text-white">
-                      Fale com o suporte
+                    <h2 id="support-modal-title" className="text-2xl font-display font-bold tracking-tight text-white">
+                      Suporte CodeTrail
                     </h2>
-                    <p className="mt-1 text-sm leading-relaxed text-text-secondary">
+                    <p className="mt-1 text-sm leading-relaxed text-on-surface-variant">
                       Descreva seu problema e nossa equipe receberá sua mensagem por e-mail.
                     </p>
                   </div>
                 </div>
 
-                <ActionButton
+                <button
                   type="button"
-                  variant="ghost"
-                  className="!min-h-[40px] !px-3"
+                  className="rounded-full w-9 h-9 flex items-center justify-center border border-outline-variant/10 hover:bg-white/5 text-on-surface-variant hover:text-white transition-colors"
                   onClick={closeModal}
                   disabled={submitting}
                   aria-label="Fechar suporte"
                 >
                   <X size={16} />
-                </ActionButton>
+                </button>
               </header>
 
-              <div className="overflow-y-auto px-6 py-6 sm:px-7 sm:py-7">
-                <div className="flex flex-col gap-5">
+              <div className="overflow-y-auto px-6 py-6 sm:px-8 sm:py-8 relative z-10">
+                <div className="flex flex-col gap-6">
                   {feedback ? (
                     <FeedbackMessage
                       tone={feedback.tone}
@@ -318,36 +324,38 @@ export function SupportWidget({
                     />
                   ) : null}
 
-                  <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
-                    <FormField label="Nome">
+                  <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
+                    <label className="workspace-label">
+                      <span>Seu Nome</span>
                       <input
                         ref={
                           firstInputKey === "name"
                             ? (node) => {
-                                initialFocusRef.current = node;
-                              }
+                              initialFocusRef.current = node;
+                            }
                             : undefined
                         }
                         name="name"
                         value={form.name}
                         onChange={(event) => updateField("name", event.target.value)}
                         maxLength={SUPPORT_LIMITS.name}
-                        placeholder="Seu nome"
+                        placeholder="Ex: João da Silva"
                         className="input-shell"
                         aria-invalid={Boolean(fieldErrors.name)}
                       />
                       {fieldErrors.name ? (
-                        <span className="text-xs text-danger">{fieldErrors.name}</span>
+                        <span className="text-xs text-error font-bold">{fieldErrors.name}</span>
                       ) : null}
-                    </FormField>
+                    </label>
 
-                    <FormField label="E-mail">
+                    <label className="workspace-label">
+                      <span>Endereço de E-mail</span>
                       <input
                         ref={
                           firstInputKey === "email"
                             ? (node) => {
-                                initialFocusRef.current = node;
-                              }
+                              initialFocusRef.current = node;
+                            }
                             : undefined
                         }
                         name="email"
@@ -360,17 +368,18 @@ export function SupportWidget({
                         aria-invalid={Boolean(fieldErrors.email)}
                       />
                       {fieldErrors.email ? (
-                        <span className="text-xs text-danger">{fieldErrors.email}</span>
+                        <span className="text-xs text-error font-bold">{fieldErrors.email}</span>
                       ) : null}
-                    </FormField>
+                    </label>
 
-                    <FormField label="Assunto">
+                    <label className="workspace-label">
+                      <span>Assunto Principal</span>
                       <input
                         ref={
                           firstInputKey === "subject"
                             ? (node) => {
-                                initialFocusRef.current = node;
-                              }
+                              initialFocusRef.current = node;
+                            }
                             : undefined
                         }
                         name="subject"
@@ -382,45 +391,50 @@ export function SupportWidget({
                         aria-invalid={Boolean(fieldErrors.subject)}
                       />
                       {fieldErrors.subject ? (
-                        <span className="text-xs text-danger">{fieldErrors.subject}</span>
+                        <span className="text-xs text-error font-bold">{fieldErrors.subject}</span>
                       ) : null}
-                    </FormField>
+                    </label>
 
-                    <FormField
-                      label="Descrição do problema"
-                      helper={`${descriptionRemaining} caracteres restantes.`}
-                    >
+                    <label className="workspace-label">
+                      <div className="flex items-center justify-between">
+                        <span>Descrição do Problema</span>
+                        <span className="text-[10px] text-on-surface-variant">{descriptionRemaining} restantes</span>
+                      </div>
                       <textarea
                         ref={
                           firstInputKey === "description"
                             ? (node) => {
-                                initialFocusRef.current = node;
-                              }
+                              initialFocusRef.current = node;
+                            }
                             : undefined
                         }
                         name="description"
                         value={form.description}
                         onChange={(event) => updateField("description", event.target.value)}
                         maxLength={SUPPORT_LIMITS.description}
-                        placeholder="Conte o que aconteceu, onde estava na interface e o que esperava que acontecesse."
+                        placeholder="Conte o que aconteceu, em qual área do sistema você estava e o que esperava que ocorresse."
                         className="input-shell min-h-[160px] resize-y"
                         aria-invalid={Boolean(fieldErrors.description)}
                       />
                       {fieldErrors.description ? (
-                        <span className="text-xs text-danger">{fieldErrors.description}</span>
+                        <span className="text-xs text-error font-bold">{fieldErrors.description}</span>
                       ) : null}
-                    </FormField>
+                    </label>
 
-                    <div className="flex flex-col gap-3 border-t border-border/50 pt-4 sm:flex-row sm:justify-end">
-                      <ActionButton
+                    <div className="flex flex-col gap-3 border-t border-outline-variant/10 pt-6 sm:flex-row sm:justify-end mt-2">
+                      <button
                         type="button"
-                        variant="ghost"
                         onClick={closeModal}
                         disabled={submitting}
+                        className="workspace-button workspace-button--secondary !rounded-[var(--radius-field)]"
                       >
-                        Fechar
-                      </ActionButton>
-                      <ActionButton type="submit" disabled={submitting}>
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={submitting}
+                        className="workspace-button workspace-button--primary !rounded-[var(--radius-field)]"
+                      >
                         {submitting ? (
                           <>
                             <LoaderCircle size={16} className="animate-spin" />
@@ -428,25 +442,23 @@ export function SupportWidget({
                           </>
                         ) : (
                           <>
-                            Enviar mensagem
+                            Enviar Ticket
                             <SendHorizonal size={16} />
                           </>
                         )}
-                      </ActionButton>
+                      </button>
                     </div>
                   </form>
 
-                  <div className="rounded-[22px] border border-border/70 bg-white/[0.03] px-4 py-4 text-sm leading-relaxed text-text-secondary">
-                    <div className="flex items-start gap-3">
-                      <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-primary/16 bg-primary/10 text-primary">
-                        <MessageSquareText size={16} />
-                      </span>
-                      <div>
-                        <strong className="block text-white">Sua mensagem vai direto para o suporte oficial</strong>
-                        <p className="m-0 mt-1">
-                          Incluímos origem da solicitação, página atual, data/hora e contexto técnico básico para agilizar o atendimento.
-                        </p>
-                      </div>
+                  <div className="rounded-xl border border-primary/10 bg-primary/[0.02] p-4 text-sm text-on-surface-variant mt-2 flex items-start gap-4">
+                    <span className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-primary">
+                      <MessageSquareText size={14} />
+                    </span>
+                    <div>
+                      <strong className="block text-white mb-1">Rastreamento Técnico Automático</strong>
+                      <p className="m-0 text-xs leading-relaxed">
+                        Incluímos a área da solicitação e contexto do seu ambiente para agilizar o suporte. Fique tranquilo, não enviamos senhas nem tokens seguros da sua sessão.
+                      </p>
                     </div>
                   </div>
                 </div>

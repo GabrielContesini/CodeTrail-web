@@ -32,8 +32,49 @@ function useHydrated() {
   );
 }
 
-function resolveVariant(target: EventTarget | null): CursorVariant {
-  const element = target instanceof HTMLElement ? target : null;
+function resolveElement(target: EventTarget | null): Element | null {
+  if (target instanceof Element) {
+    return target;
+  }
+
+  if (target instanceof Node) {
+    return target.parentElement;
+  }
+
+  return null;
+}
+
+function resolvePointerElement(target: EventTarget | null, clientX?: number, clientY?: number): Element | null {
+  if (
+    typeof window !== "undefined" &&
+    typeof clientX === "number" &&
+    typeof clientY === "number"
+  ) {
+    const hovered = document.elementFromPoint(clientX, clientY);
+    if (hovered) {
+      return hovered;
+    }
+  }
+
+  return resolveElement(target);
+}
+
+function hasPointerCursor(element: Element | null): boolean {
+  let current: Element | null = element;
+
+  while (current) {
+    if (window.getComputedStyle(current).cursor === "pointer") {
+      return true;
+    }
+
+    current = current.parentElement;
+  }
+
+  return false;
+}
+
+function resolveVariant(target: EventTarget | null, clientX?: number, clientY?: number): CursorVariant {
+  const element = resolvePointerElement(target, clientX, clientY);
   if (!element) {
     return "default";
   }
@@ -43,6 +84,10 @@ function resolveVariant(target: EventTarget | null): CursorVariant {
   }
 
   if (element.closest(ACTION_SELECTOR)) {
+    return "action";
+  }
+
+  if (hasPointerCursor(element)) {
     return "action";
   }
 
@@ -158,7 +203,7 @@ export function CustomCursor() {
     }
 
     function handlePointerMove(event: PointerEvent) {
-      const nextVariant = resolveVariant(event.target);
+      const nextVariant = resolveVariant(event.target, event.clientX, event.clientY);
       targetPositionRef.current = { x: event.clientX, y: event.clientY };
 
       if (!visibleRef.current) {
@@ -175,13 +220,13 @@ export function CustomCursor() {
     }
 
     function handlePointerOver(event: PointerEvent) {
-      const nextVariant = resolveVariant(event.target);
+      const nextVariant = resolveVariant(event.target, event.clientX, event.clientY);
       setVariant(nextVariant);
       setVisible(nextVariant !== "native");
     }
 
     function handlePointerDown(event: PointerEvent) {
-      setPressed(resolveVariant(event.target) === "action");
+      setPressed(resolveVariant(event.target, event.clientX, event.clientY) === "action");
     }
 
     function handlePointerUp() {
@@ -247,7 +292,7 @@ export function CustomCursor() {
       <span className="ct-cursor__halo" />
       <span className="ct-cursor__ring" />
       <span className="ct-cursor__core" />
-      <span className="ct-cursor__glyph">↗</span>
+      <span className="ct-cursor__glyph">click</span>
     </div>
   );
 }

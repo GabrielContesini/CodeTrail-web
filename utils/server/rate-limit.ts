@@ -1,4 +1,18 @@
 const buckets = new Map<string, { resetAt: number; count: number }>();
+let lastCleanup = Date.now();
+const CLEANUP_INTERVAL_MS = 60 * 1000;
+
+function cleanupOldBuckets() {
+  const now = Date.now();
+  if (now - lastCleanup < CLEANUP_INTERVAL_MS) return;
+  
+  lastCleanup = now;
+  for (const [key, bucket] of buckets) {
+    if (bucket.resetAt <= now) {
+      buckets.delete(key);
+    }
+  }
+}
 
 export interface RateLimitResult {
   allowed: boolean;
@@ -12,6 +26,8 @@ export function checkRateLimit(options: {
   limit: number;
   windowMs: number;
 }): RateLimitResult {
+  cleanupOldBuckets();
+  
   const now = Date.now();
   const bucketKey = `${options.namespace}:${options.key}`;
   const existing = buckets.get(bucketKey);

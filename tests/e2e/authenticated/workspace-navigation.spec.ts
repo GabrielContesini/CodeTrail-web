@@ -21,8 +21,14 @@ const routes = [
 
 test.describe("authenticated workspace navigation", () => {
   for (const route of routes) {
-    test(`opens ${route.path}`, async ({ page }) => {
+    test(`opens ${route.path}`, async ({ page, isMobile }) => {
       await gotoWorkspaceRoute(page, route.path, route.title);
+
+      if (Boolean(isMobile)) {
+        await expect(page.getByRole("button", { name: "Abrir sidebar" })).toBeVisible();
+        return;
+      }
+
       await expect(page.getByTestId("workspace-sidebar")).toBeVisible();
       await expect(page.getByText("CodeTrail").first()).toBeVisible();
 

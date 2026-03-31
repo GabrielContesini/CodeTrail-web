@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
         userId: user.id,
         selectedPlan: plan,
         source: "google_oauth",
-        platformInterest: target === "download" ? "windows" : "web",
+        platformInterest: "web",
       });
     } catch (error) {
       logServerEvent({

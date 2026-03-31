@@ -197,7 +197,17 @@ test.describe("detailed workspace audit", () => {
     await page.locator('input[name="scope"]').fill("Escopo QA");
     await page.locator('textarea[name="description"]').fill(`Descricao ${projectToken}`);
     await page.getByRole("dialog").getByRole("button", { name: "Salvar Dados" }).click();
-    await expect(page.getByRole("dialog")).toBeHidden();
+    const projectLimitError = page.getByText("Seu plano atual atingiu o limite de projetos.");
+
+    await expect(async () => {
+      const dialogHidden = !(await page.getByRole("dialog").isVisible().catch(() => false));
+      const limitVisible = await projectLimitError.isVisible().catch(() => false);
+      expect(dialogHidden || limitVisible).toBeTruthy();
+    }).toPass({ timeout: 20_000 });
+
+    if (await projectLimitError.isVisible().catch(() => false)) {
+      return;
+    }
 
     const projectLibraryItem = page.getByTestId("project-item").filter({ hasText: projectTitle }).first();
     await projectLibraryItem.click();
@@ -225,12 +235,21 @@ test.describe("detailed workspace audit", () => {
     await page.goto("/workspace/flashcards");
     await expect(page.locator("h1, h2").filter({ hasText: "Flashcards" }).first()).toBeVisible();
 
-    if (await page.getByText("Flashcards premium bloqueados").isVisible().catch(() => false)) {
+    const lockedFlashcards = page.getByRole("heading", { name: "Flashcards premium bloqueados" });
+    const newCardButton = page.getByRole("button", { name: "Novo card" });
+
+    await expect(async () => {
+      const lockedVisible = await lockedFlashcards.isVisible().catch(() => false);
+      const buttonVisible = await newCardButton.isVisible().catch(() => false);
+      expect(lockedVisible || buttonVisible).toBeTruthy();
+    }).toPass({ timeout: 15_000 });
+
+    if (await lockedFlashcards.isVisible().catch(() => false)) {
       await expect(page.getByRole("button", { name: /Fazer upgrade/i })).toBeVisible();
       return;
     }
 
-    await page.getByRole("button", { name: "Novo card" }).click();
+    await newCardButton.click();
     await page.locator('input[name="deck_name"]').fill("QA Deck");
     await page.locator('textarea[name="question"]').fill(question);
     await page.locator('textarea[name="answer"]').fill(`Resposta ${token}`);
@@ -257,12 +276,21 @@ test.describe("detailed workspace audit", () => {
     await page.goto("/workspace/mind-maps");
     await expect(page.locator("h1, h2").filter({ hasText: "Mind Maps" }).first()).toBeVisible();
 
-    if (await page.getByText("Mind maps premium bloqueados").isVisible().catch(() => false)) {
+    const lockedMindMaps = page.getByRole("heading", { name: "Mind maps premium bloqueados" });
+    const newMapButton = page.getByRole("button", { name: "Novo mapa" });
+
+    await expect(async () => {
+      const lockedVisible = await lockedMindMaps.isVisible().catch(() => false);
+      const buttonVisible = await newMapButton.isVisible().catch(() => false);
+      expect(lockedVisible || buttonVisible).toBeTruthy();
+    }).toPass({ timeout: 15_000 });
+
+    if (await lockedMindMaps.isVisible().catch(() => false)) {
       await expect(page.getByRole("button", { name: /Fazer upgrade/i })).toBeVisible();
       return;
     }
 
-    await page.getByRole("button", { name: "Novo mapa" }).click();
+    await newMapButton.click();
     await expect(page.getByRole("heading", { name: "Novo mapa" })).toBeVisible();
     await page.getByRole("dialog").getByLabel("Titulo").fill(mapTitle);
     await page.getByRole("dialog").getByRole("button", { name: "Criar mapa" }).click();

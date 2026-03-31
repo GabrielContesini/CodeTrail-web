@@ -10,7 +10,6 @@ export function AuthTrigger({
   children,
   className,
   plan,
-  target = "workspace",
   onClick,
 }: {
   children: React.ReactNode;
@@ -33,8 +32,8 @@ export function AuthTrigger({
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (user) {
-      if (plan) {
+      if (user) {
+        if (plan) {
         const intentResult = await savePlanIntent(plan);
         if (intentResult?.error) {
           console.error("Failed to save plan intent:", intentResult.error);
@@ -51,7 +50,7 @@ export function AuthTrigger({
         return;
       }
 
-      router.push(target === "download" ? "/download/windows" : "/workspace/dashboard");
+      router.push("/workspace/dashboard");
       return;
     }
 
@@ -59,10 +58,6 @@ export function AuthTrigger({
     if (plan) {
       params.set("plan", plan);
     }
-    if (target !== "workspace") {
-      params.set("target", target);
-    }
-
     router.push(params.size ? `/auth?${params.toString()}` : "/auth");
   };
 

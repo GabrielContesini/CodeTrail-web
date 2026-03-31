@@ -14,14 +14,13 @@ test.describe("api routes", () => {
     expect(String(payload.publishableKey)).toMatch(/^pk_/);
   });
 
-  test("redirects download endpoint to the latest windows artifact", async ({ request }) => {
+  test("redirects the removed windows download endpoint back to auth", async ({ request }) => {
     const response = await request.get("/api/download/windows", {
       failOnStatusCode: false,
       maxRedirects: 0,
     });
 
     expect([307, 308]).toContain(response.status());
-    expect(response.headers().location).toBeTruthy();
-    expect(response.headers()["x-codetrail-download-source"]).toBeTruthy();
+    expect(response.headers().location).toMatch(/\/auth$/);
   });
 });

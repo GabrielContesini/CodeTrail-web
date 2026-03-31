@@ -9,6 +9,12 @@ export type TaskPriority = "low" | "medium" | "high" | "critical";
 export type TaskStatus = "pending" | "in_progress" | "completed";
 export type ReviewStatus = "pending" | "completed" | "overdue";
 export type ProjectStatus = "planned" | "active" | "blocked" | "completed";
+export type TrackJourneyStatus =
+  | "not_started"
+  | "in_progress"
+  | "paused"
+  | "completed";
+export type TrackTimelineStepStatus = TrackJourneyStatus | "blocked";
 export type FocusType =
   | "job"
   | "promotion"
@@ -55,6 +61,7 @@ export interface WorkspaceUser {
 export interface ProfileRow {
   id: string;
   full_name: string;
+  avatar_url: string | null;
   email: string | null;
   desired_area: string;
   current_level: SkillLevel;
@@ -119,6 +126,34 @@ export interface StudyModuleRow {
   estimated_hours: number;
   sort_order: number;
   is_core: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserTrackProgressRow {
+  id: string;
+  user_id: string;
+  track_id: string;
+  status: TrackJourneyStatus;
+  current_module_id: string | null;
+  progress_percent: number;
+  started_at: string | null;
+  paused_at: string | null;
+  completed_at: string | null;
+  last_activity_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserTrackModuleProgressRow {
+  id: string;
+  user_id: string;
+  track_id: string;
+  module_id: string;
+  status: TrackJourneyStatus;
+  started_at: string | null;
+  paused_at: string | null;
+  completed_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -204,6 +239,9 @@ export interface StudyNoteRow {
   folder_name: string;
   title: string;
   content: string;
+  track_id: string | null;
+  module_id: string | null;
+  project_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -248,6 +286,20 @@ export interface AppSettingsRow {
   daily_reminder_hour: number | null;
   created_at: string;
   updated_at: string;
+}
+
+export type NotificationType = "task" | "review" | "session" | "project" | "system" | "achievement";
+
+export interface NotificationRow {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  link: string | null;
+  is_read: boolean;
+  created_at: string;
+  read_at: string | null;
 }
 
 export interface BillingFeatureEntitlement {
@@ -404,6 +456,43 @@ export interface TrackBlueprint {
   modules: StudyModuleRow[];
   progressBySkill: Record<string, UserSkillProgressRow>;
   progressPercent: number;
+  isCompleted: boolean;
+}
+
+export interface TrackTimelineStep {
+  id: string;
+  order: number;
+  title: string;
+  description: string;
+  status: TrackTimelineStepStatus;
+  estimatedHours: number;
+  estimatedLabel: string;
+  progressPercent: number;
+  isAccessible: boolean;
+  isCurrent: boolean;
+  startedAt: string | null;
+  pausedAt: string | null;
+  completedAt: string | null;
+  contentItems: string[];
+  tasks: TaskRow[];
+  observations: string[];
+}
+
+export interface TrackTimelineDetail {
+  track: StudyTrackRow;
+  blueprint: TrackBlueprint;
+  state: UserTrackProgressRow | null;
+  status: TrackJourneyStatus;
+  progressPercent: number;
+  currentStepId: string | null;
+  startedAt: string | null;
+  pausedAt: string | null;
+  completedAt: string | null;
+  completedSteps: number;
+  stepCount: number;
+  unlockedSteps: number;
+  selectedSuggestedStepId: string | null;
+  steps: TrackTimelineStep[];
 }
 
 export interface ProjectBundle {
@@ -460,6 +549,8 @@ export interface WorkspaceData {
   skills: StudySkillRow[];
   progress: UserSkillProgressRow[];
   modules: StudyModuleRow[];
+  trackStates: UserTrackProgressRow[];
+  trackModuleStates: UserTrackModuleProgressRow[];
   sessions: StudySessionRow[];
   tasks: TaskRow[];
   reviews: ReviewRow[];
@@ -468,6 +559,7 @@ export interface WorkspaceData {
   notes: StudyNoteRow[];
   flashcards: FlashcardRow[];
   mindMaps: MindMapRow[];
+  notifications: NotificationRow[];
   settings: AppSettingsRow | null;
   billing: BillingSnapshot;
   trackBlueprints: TrackBlueprint[];
@@ -515,6 +607,12 @@ export interface WorkspaceContextValue {
   deleteProject: (id: string) => Promise<void>;
   saveProjectStep: (payload: Partial<ProjectStepRow>) => Promise<void>;
   deleteProjectStep: (id: string) => Promise<void>;
+  selectTrack: (trackId: string) => Promise<void>;
+  startTrack: (trackId: string) => Promise<void>;
+  pauseTrack: (trackId: string) => Promise<void>;
+  resumeTrack: (trackId: string) => Promise<void>;
+  completeTrackStep: (trackId: string) => Promise<void>;
+  completeTrack: (trackId: string) => Promise<void>;
   saveNote: (payload: Partial<StudyNoteRow>) => Promise<void>;
   deleteNote: (id: string) => Promise<void>;
   saveFlashcard: (payload: Partial<FlashcardRow>) => Promise<void>;
@@ -525,6 +623,9 @@ export interface WorkspaceContextValue {
     flashcard: FlashcardRow,
     grade: "again" | "hard" | "good" | "easy",
   ) => Promise<void>;
+  markNotificationAsRead: (notificationId: string) => Promise<void>;
+  markAllNotificationsAsRead: () => Promise<void>;
+  deleteNotification: (id: string) => Promise<void>;
   refreshBilling: () => Promise<void>;
   createCheckout: (planCode: BillingPlanCode, returnUrl?: string | null) => Promise<void>;
   openPortal: () => Promise<void>;

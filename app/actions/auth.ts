@@ -28,7 +28,7 @@ export async function loginAndContinue(
   formData: FormData,
   options?: {
     selectedPlan?: string | null;
-    target?: "workspace" | "download";
+    target?: "workspace";
   },
 ) {
   const supabase = await createClient();
@@ -46,8 +46,6 @@ export async function loginAndContinue(
   }
 
   const selectedPlan = parsePlanCode(options?.selectedPlan ?? null);
-  const target = options?.target === "download" ? "download" : "workspace";
-
   if (selectedPlan) {
     const intentResult = await persistPlanIntent(supabase, selectedPlan);
     if (intentResult?.error) {
@@ -60,10 +58,10 @@ export async function loginAndContinue(
   }
 
   if (selectedPlan === "free") {
-    redirect(target === "download" ? "/download/windows" : "/workspace/dashboard");
+    redirect("/workspace/dashboard");
   }
 
-  redirect(target === "download" ? "/download/windows" : "/workspace/dashboard");
+  redirect("/workspace/dashboard");
 }
 
 export async function signup(formData: FormData) {
@@ -121,7 +119,7 @@ async function persistPlanIntent(
       userId: user.id,
       selectedPlan: planCode,
       source: "landing_page",
-      platformInterest: "windows",
+      platformInterest: "web",
     });
   } catch (error) {
     return {
