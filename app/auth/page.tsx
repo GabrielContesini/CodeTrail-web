@@ -294,13 +294,13 @@ export default function AuthPage() {
 
   return (
     <>
-      <main className="relative flex min-h-screen flex-col items-center justify-center overflow-x-hidden overflow-y-auto bg-transparent text-on-surface font-ui selection:bg-primary/30">
+      <main className="relative flex min-h-screen flex-col items-center justify-center overflow-x-hidden bg-transparent text-on-surface font-ui selection:bg-primary/30 z-10">
 
         {/* Decorative Light Source */}
         <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[800px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/5 blur-[120px]"></div>
 
         {/* Header — matches workspace sidebar logo block */}
-        <header className="fixed top-0 w-full z-50 flex justify-center items-center h-20 pointer-events-none">
+        <header className="absolute top-0 w-full z-40 flex justify-center items-center h-20 pointer-events-none">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-primary/20 bg-primary/10 shadow-[0_0_18px_rgba(50,208,255,0.14)] shrink-0">
               <Image
@@ -320,7 +320,7 @@ export default function AuthPage() {
         </header>
 
         {/* Auth Form Canvas */}
-        <div className="relative z-10 w-full max-w-[440px] px-6 py-28 mb-10">
+        <div className="relative z-50 w-full max-w-[440px] px-6 py-28 mb-10">
 
           {/* Page Header — PageFrame eyebrow pattern */}
           <div className="mb-8 flex flex-col gap-3">
