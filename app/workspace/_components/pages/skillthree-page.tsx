@@ -561,15 +561,48 @@ function SkillThreeModals({
             <div className="bg-[#0e0e0e]/50 -m-8 p-0 flex flex-col lg:flex-row min-h-[500px] border-t border-white/[0.05]">
                {/* Left Section: Hero (35%) */}
                <div className="w-full lg:w-[40%] bg-gradient-to-b from-[#1a1a1a] to-[#0e0e0e] border-b lg:border-b-0 lg:border-r border-white/[0.05] p-8 flex flex-col justify-between relative overflow-hidden">
-                 {/* Background image with architecture/server theme */}
-                 <div className="absolute inset-0 opacity-30">
-                   <img 
-                     alt="Arquitetura de sistema" 
-                     className="w-full h-full object-cover grayscale" 
-                     src="https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=500&q=60"
-                   />
-                 </div>
-                 <div className="absolute inset-0 bg-gradient-to-b from-[#1a1a1a]/40 via-transparent to-[#0e0e0e]"></div>
+                  {/* Background image with architecture/server theme */}
+                  <div className="absolute inset-0 opacity-25">
+                    {/* SVG pattern for architecture aesthetic */}
+                    <svg className="w-full h-full" viewBox="0 0 400 600" preserveAspectRatio="xMidYMid slice">
+                      <defs>
+                        <filter id="archGlow">
+                          <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
+                          <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                          </feMerge>
+                        </filter>
+                      </defs>
+                      {/* Background */}
+                      <rect width="400" height="600" fill="#1a1a1a"/>
+                      {/* Server stacks */}
+                      <g opacity="0.5">
+                        <rect x="50" y="80" width="60" height="40" fill="none" stroke="#81ecff" strokeWidth="1"/>
+                        <rect x="50" y="130" width="60" height="40" fill="none" stroke="#81ecff" strokeWidth="1"/>
+                        <rect x="50" y="180" width="60" height="40" fill="none" stroke="#81ecff" strokeWidth="1"/>
+                        <rect x="290" y="80" width="60" height="40" fill="none" stroke="#81ecff" strokeWidth="1"/>
+                        <rect x="290" y="130" width="60" height="40" fill="none" stroke="#81ecff" strokeWidth="1"/>
+                        <rect x="290" y="180" width="60" height="40" fill="none" stroke="#81ecff" strokeWidth="1"/>
+                      </g>
+                      {/* Network connections */}
+                      <g opacity="0.3">
+                        <line x1="110" y1="100" x2="290" y2="100" stroke="#81ecff" strokeWidth="0.5"/>
+                        <line x1="110" y1="150" x2="290" y2="150" stroke="#81ecff" strokeWidth="0.5"/>
+                        <line x1="110" y1="200" x2="290" y2="200" stroke="#81ecff" strokeWidth="0.5"/>
+                        <circle cx="150" cy="150" r="3" fill="#81ecff"/>
+                        <circle cx="250" cy="150" r="3" fill="#81ecff"/>
+                      </g>
+                      {/* Central hub */}
+                      <circle cx="200" cy="350" r="50" fill="none" stroke="#81ecff" strokeWidth="1" opacity="0.4"/>
+                      <circle cx="200" cy="350" r="35" fill="none" stroke="#00e3fd" strokeWidth="1" opacity="0.5"/>
+                      <circle cx="200" cy="350" r="20" fill="#81ecff" opacity="0.2"/>
+                      {/* Data flow paths */}
+                      <path d="M 80 100 Q 140 200 200 350" fill="none" stroke="#81ecff" strokeWidth="0.5" opacity="0.3"/>
+                      <path d="M 320 100 Q 260 200 200 350" fill="none" stroke="#81ecff" strokeWidth="0.5" opacity="0.3"/>
+                    </svg>
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-b from-[#1a1a1a]/40 via-transparent to-[#0e0e0e]"></div>
                 
                 <div className="relative z-10 space-y-8">
                   {/* Status Badge Section */}
@@ -756,12 +789,37 @@ function SkillThreeModals({
               {/* Left Section: Visual & Header (40%) */}
               <div className="w-full lg:w-[40%] relative min-h-[300px] flex flex-col justify-end p-8 bg-[#131313] border-b lg:border-b-0 lg:border-r border-white/[0.05] overflow-hidden">
                 {/* Background visual */}
-                <div className="absolute inset-0 opacity-40">
-                  <img 
-                    alt="Ninja digital com katana" 
-                    className="w-full h-full object-cover grayscale" 
-                    src="https://images.unsplash.com/photo-1578926078328-123456789?auto=format&fit=crop&w=500&q=60"
-                  />
+                <div className="absolute inset-0 opacity-30">
+                  {/* SVG pattern for ninja/katana aesthetic */}
+                  <svg className="w-full h-full" viewBox="0 0 400 600" preserveAspectRatio="xMidYMid slice">
+                    <defs>
+                      <filter id="glow">
+                        <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                        <feMerge>
+                          <feMergeNode in="coloredBlur"/>
+                          <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                      </filter>
+                    </defs>
+                    {/* Background gradient */}
+                    <rect width="400" height="600" fill="#1a1a1a"/>
+                    {/* Circuit pattern */}
+                    <circle cx="200" cy="300" r="150" fill="none" stroke="#81ecff" strokeWidth="0.5" opacity="0.4"/>
+                    <circle cx="200" cy="300" r="100" fill="none" stroke="#81ecff" strokeWidth="0.5" opacity="0.3"/>
+                    <circle cx="200" cy="300" r="50" fill="none" stroke="#81ecff" strokeWidth="0.5" opacity="0.2"/>
+                    {/* Lines */}
+                    <line x1="200" y1="150" x2="200" y2="450" stroke="#81ecff" strokeWidth="0.5" opacity="0.3"/>
+                    <line x1="50" y1="300" x2="350" y2="300" stroke="#81ecff" strokeWidth="0.5" opacity="0.3"/>
+                    {/* Sword/Katana silhouette */}
+                    <g filter="url(#glow)" opacity="0.6">
+                      <rect x="195" y="50" width="10" height="500" fill="#00e3fd"/>
+                      <polygon points="200,40 195,50 205,50" fill="#00e3fd"/>
+                      <circle cx="200" cy="560" r="15" fill="#81ecff"/>
+                    </g>
+                    {/* Data stream effect */}
+                    <path d="M 100 200 Q 150 250 200 300 T 300 400" stroke="#81ecff" strokeWidth="1" fill="none" opacity="0.2"/>
+                    <path d="M 300 200 Q 250 250 200 300 T 100 400" stroke="#81ecff" strokeWidth="1" fill="none" opacity="0.2"/>
+                  </svg>
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-[#131313] via-[#131313]/40 to-transparent"></div>
                 
