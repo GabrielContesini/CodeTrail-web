@@ -28,11 +28,12 @@ import {
 } from "@/app/components/ui/motion-system";
 import { useWorkspace } from "@/app/workspace/_components/workspace-provider";
 import type {
-  SkillThreeAchievementState,
-  SkillThreeExperience,
-  SkillThreeLeaderboardScope,
-  SkillThreeNodeState,
-} from "@/utils/skillthree/types";
+   SkillThreeAchievementState,
+   SkillThreeExperience,
+   SkillThreeLeaderboardScope,
+   SkillThreeNodeState,
+   SkillThreeMissionState,
+ } from "@/utils/skillthree/types";
 
 const iconMap: Record<string, LucideIcon> = {
   activity: Activity,
@@ -66,12 +67,13 @@ export function SkillThreePage() {
   const skillThree = data!.skillThree;
   const reducedMotion = useStableReducedMotion();
   const router = useRouter();
-  const [leaderboardScope, setLeaderboardScope] =
-    useState<SkillThreeLeaderboardScope>("global");
-  const [achievementsOpen, setAchievementsOpen] = useState(false);
-  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
-  const [selectedNode, setSelectedNode] = useState<SkillThreeNodeState | null>(null);
-  const [zoom, setZoom] = useState(1);
+   const [leaderboardScope, setLeaderboardScope] =
+     useState<SkillThreeLeaderboardScope>("global");
+   const [achievementsOpen, setAchievementsOpen] = useState(false);
+   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+   const [selectedNode, setSelectedNode] = useState<SkillThreeNodeState | null>(null);
+   const [selectedMission, setSelectedMission] = useState<SkillThreeMissionState | null>(null);
+   const [zoom, setZoom] = useState(1);
 
   const leaderboard =
     skillThree.leaderboardByScope[
@@ -239,32 +241,32 @@ export function SkillThreePage() {
                    VER_TUDO
                  </button>
                </div>
-                <div className="space-y-3">
-                  {skillThree.dailyMissions.slice(0, 2).map((mission, idx) => (
-                    <div key={mission.instanceId} className="group bg-[#1a1a1a] hover:bg-[#1f1f1e] border border-white/[0.08] hover:border-primary/30 rounded-lg p-4 transition-all flex items-center gap-3 cursor-pointer">
-                      <div className="w-12 h-12 rounded-lg bg-[#262626] flex items-center justify-center group-hover:bg-primary/20 transition-colors flex-shrink-0 text-primary">
-                        {renderIcon(idx === 0 ? "zap" : "cpu", 18)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start gap-2">
-                          <h4 className="text-xs font-black text-white tracking-tight truncate">{mission.title}</h4>
-                          <span className={`text-[8px] font-black ${mission.completed ? 'text-primary bg-primary/10 border border-primary/30' : 'text-[#ff6b6b] bg-[#ff6b6b]/10 border border-[#ff6b6b]/30'} px-1.5 py-0.5 rounded-sm flex-shrink-0 whitespace-nowrap`}>
-                            {mission.completed ? 'CONCLUÍDA' : 'DIFÍCIL'}
-                          </span>
-                        </div>
-                        <p className="text-[10px] text-[#adaaaa] mt-0.5 line-clamp-1">{mission.description}</p>
-                        <div className="flex items-center gap-3 mt-1.5">
-                          <span className="text-[9px] text-primary font-black">
-                            +{mission.rewardXp} XP
-                          </span>
-                          <span className="text-[9px] text-[#adaaaa]">
-                            {Math.round(mission.progressPercent)}% concluído
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                 <div className="space-y-3">
+                   {skillThree.dailyMissions.slice(0, 2).map((mission, idx) => (
+                     <div key={mission.instanceId} onClick={() => setSelectedMission(mission)} className="group bg-[#1a1a1a] hover:bg-[#1f1f1e] border border-white/[0.08] hover:border-primary/30 rounded-lg p-4 transition-all flex items-center gap-3 cursor-pointer">
+                       <div className="w-12 h-12 rounded-lg bg-[#262626] flex items-center justify-center group-hover:bg-primary/20 transition-colors flex-shrink-0 text-primary">
+                         {renderIcon(idx === 0 ? "zap" : "cpu", 18)}
+                       </div>
+                       <div className="flex-1 min-w-0">
+                         <div className="flex justify-between items-start gap-2">
+                           <h4 className="text-xs font-black text-white tracking-tight truncate">{mission.title}</h4>
+                           <span className={`text-[8px] font-black ${mission.completed ? 'text-primary bg-primary/10 border border-primary/30' : 'text-[#ff6b6b] bg-[#ff6b6b]/10 border border-[#ff6b6b]/30'} px-1.5 py-0.5 rounded-sm flex-shrink-0 whitespace-nowrap`}>
+                             {mission.completed ? 'CONCLUÍDA' : 'DIFÍCIL'}
+                           </span>
+                         </div>
+                         <p className="text-[10px] text-[#adaaaa] mt-0.5 line-clamp-1">{mission.description}</p>
+                         <div className="flex items-center gap-3 mt-1.5">
+                           <span className="text-[9px] text-primary font-black">
+                             +{mission.rewardXp} XP
+                           </span>
+                           <span className="text-[9px] text-[#adaaaa]">
+                             {Math.round(mission.progressPercent)}% concluído
+                           </span>
+                         </div>
+                       </div>
+                     </div>
+                   ))}
+                 </div>
              </div>
 
              {/* LEADERBOARD */}
@@ -324,17 +326,19 @@ export function SkillThreePage() {
       </motion.div>
 
       <SkillThreeModals
-        skillThree={skillThree}
-        achievementsOpen={achievementsOpen}
-        leaderboardOpen={leaderboardOpen}
-        selectedNode={selectedNode}
-        leaderboardScope={leaderboardScope}
-        leaderboard={leaderboard}
-        onCloseAchievements={() => setAchievementsOpen(false)}
-        onCloseLeaderboard={() => setLeaderboardOpen(false)}
-        onCloseNode={() => setSelectedNode(null)}
-        onChangeScope={setLeaderboardScope}
-      />
+         skillThree={skillThree}
+         achievementsOpen={achievementsOpen}
+         leaderboardOpen={leaderboardOpen}
+         selectedNode={selectedNode}
+         selectedMission={selectedMission}
+         leaderboardScope={leaderboardScope}
+         leaderboard={leaderboard}
+         onCloseAchievements={() => setAchievementsOpen(false)}
+         onCloseLeaderboard={() => setLeaderboardOpen(false)}
+         onCloseNode={() => setSelectedNode(null)}
+         onCloseMission={() => setSelectedMission(null)}
+         onChangeScope={setLeaderboardScope}
+       />
     </>
   );
 }
@@ -479,22 +483,26 @@ function SkillThreeModals({
   achievementsOpen,
   leaderboardOpen,
   selectedNode,
+  selectedMission,
   leaderboardScope,
   leaderboard,
   onCloseAchievements,
   onCloseLeaderboard,
   onCloseNode,
+  onCloseMission,
   onChangeScope,
 }: {
   skillThree: SkillThreeExperience;
   achievementsOpen: boolean;
   leaderboardOpen: boolean;
   selectedNode: SkillThreeNodeState | null;
+  selectedMission: SkillThreeMissionState | null;
   leaderboardScope: SkillThreeLeaderboardScope;
   leaderboard: SkillThreeExperience["leaderboardByScope"]["global"];
   onCloseAchievements: () => void;
   onCloseLeaderboard: () => void;
   onCloseNode: () => void;
+  onCloseMission: () => void;
   onChangeScope: (scope: SkillThreeLeaderboardScope) => void;
 }) {
   return (
@@ -541,60 +549,332 @@ function SkillThreeModals({
          </div>
        </WorkspaceModal>
 
-       <WorkspaceModal
-         open={Boolean(selectedNode)}
-         onClose={onCloseNode}
-         title={selectedNode?.label ?? "Nó"}
-         subtitle={selectedNode?.description}
-         size="md"
-         eyebrow={selectedNode?.domain ?? "Árvore de Habilidades"}
-       >
-         {selectedNode ? (
-           <div className="space-y-4">
-             <div className="grid gap-4 sm:grid-cols-2">
-               <MetricCard
-                 label="Status"
-                 value={selectedNode.status === "locked" ? "BLOQUEADO" : selectedNode.status === "available" ? "DISPONÍVEL" : selectedNode.status === "in_progress" ? "EM PROGRESSO" : selectedNode.status === "unlocked" ? "DESBLOQUEADO" : "DOMINADO"}
-                 helper={selectedNode.remainingLabel}
-                 icon={<Cpu size={18} />}
-               />
-               <MetricCard
-                 label="Recompensa"
-                 value={`+${selectedNode.rewardXp} XP`}
-                 helper={`Nv. recomendado ${selectedNode.recommendedLevel}`}
-                 icon={<Zap size={18} />}
-               />
-             </div>
-             <div className="space-y-2">
-               <div className="flex items-center justify-between gap-4">
-                 <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-text-secondary">
-                   Progresso do Nó
-                 </span>
-                 <span className="text-sm font-bold text-primary">
-                   {selectedNode.remainingLabel}
-                 </span>
+        <WorkspaceModal
+          open={Boolean(selectedNode)}
+          onClose={onCloseNode}
+          title={selectedNode?.label ?? "Nó"}
+          subtitle={selectedNode?.description}
+          size="xl"
+          eyebrow={selectedNode?.domain ?? "Árvore de Habilidades"}
+        >
+          {selectedNode ? (
+            <div className="bg-[#0e0e0e]/50 -m-8 p-0 flex flex-col lg:flex-row min-h-[500px] border-t border-white/[0.05]">
+              {/* Left Section: Hero (35%) */}
+              <div className="w-full lg:w-[40%] bg-gradient-to-b from-[#1a1a1a] to-[#0e0e0e] border-b lg:border-b-0 lg:border-r border-white/[0.05] p-8 flex flex-col justify-between relative overflow-hidden">
+                {/* Background gradient effect */}
+                <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, #81ecff 0%, transparent 60%)' }} />
+                
+                <div className="relative z-10 space-y-8">
+                  {/* Status Badge Section */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="px-3 py-1 bg-primary/10 text-primary border border-primary/30 rounded-full text-[10px] font-black tracking-widest uppercase">
+                        Protocolo: {selectedNode.domain}
+                      </span>
+                      <span className="px-3 py-1 bg-white/5 text-primary border border-white/10 rounded-full text-[10px] font-black tracking-widest uppercase">
+                        +{selectedNode.rewardXp} XP
+                      </span>
+                    </div>
+                    <h2 className="text-4xl font-black text-white uppercase tracking-tighter leading-none">
+                      {selectedNode.label}
+                    </h2>
+                  </div>
+                  
+                  {/* Status & Progress */}
+                  <div className="space-y-4">
+                    <div className="bg-primary/20 border border-primary/30 px-4 py-3 rounded-lg flex items-center gap-2">
+                      <span className="text-primary font-black text-sm">✓</span>
+                      <span className="text-primary font-black tracking-widest text-xs uppercase">
+                        Status do Hábil: {selectedNode.status === "locked" ? "BLOQUEADO" : selectedNode.status === "available" ? "DISPONÍVEL" : selectedNode.status === "in_progress" ? "EM PROGRESSO" : selectedNode.status === "unlocked" ? "DESBLOQUEADO" : "DOMINADO"}
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[9px] text-[#adaaaa] uppercase font-black">Progressão de Maestria</span>
+                        <span className="text-[10px] font-black text-primary">{Math.round(selectedNode.progressPercent)}%</span>
+                      </div>
+                      <div className="h-2 bg-[#262626] rounded-full overflow-hidden border border-white/[0.05]">
+                        <div 
+                          className="h-full bg-gradient-to-r from-primary to-[#00e3fd] shadow-[0_0_8px_rgba(129,236,255,0.8)]"
+                          style={{ width: `${selectedNode.progressPercent}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <ProgressBar value={selectedNode.progressPercent} />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {selectedNode.linkedAchievementIds.map((achievementId) => {
-                const achievement = skillThree.achievements.find((item) => item.id === achievementId);
-                if (!achievement) return null;
-                return (
-                  <Pill key={achievementId} tone={achievement.status === "locked" ? "neutral" : "primary"}>
-                    {achievement.name}
-                  </Pill>
-                );
-              })}
-            </div>
-          </div>
-        ) : null}
-      </WorkspaceModal>
-    </>
-  );
-}
+              
+              {/* Right Section: Details (65%) */}
+              <div className="w-full lg:w-[60%] p-8 md:p-12 flex flex-col">
+                <div className="space-y-8 flex-1">
+                  {/* Description / Technical Overview */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <div className="h-[1px] w-8 bg-primary"></div>
+                      <h3 className="text-xs font-black text-primary uppercase tracking-widest">Visão Técnica Geral</h3>
+                    </div>
+                    <p className="text-[#adaaaa] leading-relaxed text-sm">
+                      {selectedNode.description}
+                    </p>
+                  </div>
 
-function LeaderboardRow({
+                  {/* Capabilities Section */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <div className="h-[1px] w-8 bg-primary"></div>
+                      <h3 className="text-xs font-black text-primary uppercase tracking-widest">Capacidades Desbloqueadas</h3>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {[
+                        { icon: "hub", title: "Arquitetura Distribuída", desc: "Distribuir operações com 99.9% de eficiência." },
+                        { icon: "security", title: "Operações Seguras", desc: "Implementar filtragem em todos os nós de entrada." },
+                        { icon: "database", title: "Escalabilidade Horizontal", desc: "Dimensionar através de 10+ regiões em paralelo." },
+                        { icon: "speed", title: "Otimização de Latência", desc: "Afinar tempos de resposta sub-milissegundo." }
+                      ].map((cap, idx) => (
+                        <div key={idx} className="bg-[#131313] border border-white/[0.05] rounded-lg p-4 hover:border-primary/30 transition-all group">
+                          <div className="flex items-start gap-3">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary flex-shrink-0 text-sm">
+                              {renderIcon(cap.icon, 16)}
+                            </div>
+                            <div>
+                              <p className="text-xs font-black text-white">{cap.title}</p>
+                              <p className="text-[11px] text-[#adaaaa] mt-1">{cap.desc}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Mastery Metrics */}
+                  {selectedNode.status === "mastered" && (
+                    <div className="bg-[#1a1a1a] border border-white/[0.05] rounded-xl p-6 space-y-4 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-4 opacity-5">
+                        {renderIcon(selectedNode.icon, 48)}
+                      </div>
+                      <h3 className="text-xs font-black text-white uppercase tracking-widest">Métricas de Maestria</h3>
+                      <div className="space-y-4">
+                        <div>
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-xs text-[#adaaaa] uppercase font-black">Retenção de Conhecimento</span>
+                            <span className="text-xs font-black text-primary">100%</span>
+                          </div>
+                          <div className="h-1 bg-[#262626] rounded-full overflow-hidden">
+                            <div className="h-full w-full bg-primary shadow-[0_0_8px_rgba(129,236,255,0.8)]" />
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-xs text-[#adaaaa] uppercase font-black">Aplicação Prática</span>
+                            <span className="text-xs font-black text-primary">88%</span>
+                          </div>
+                          <div className="h-1 bg-[#262626] rounded-full overflow-hidden">
+                            <div className="h-full w-[88%] bg-primary shadow-[0_0_8px_rgba(129,236,255,0.8)]" />
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-xs text-[#adaaaa] uppercase font-black">Sucesso em Implementação</span>
+                            <span className="text-xs font-black text-primary">95%</span>
+                          </div>
+                          <div className="h-1 bg-[#262626] rounded-full overflow-hidden">
+                            <div className="h-full w-[95%] bg-primary shadow-[0_0_8px_rgba(129,236,255,0.8)]" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Linked Achievements */}
+                  {selectedNode.linkedAchievementIds.length > 0 && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <div className="h-[1px] w-8 bg-primary"></div>
+                        <h3 className="text-xs font-black text-primary uppercase tracking-widest">Conquistas Relacionadas</h3>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        {selectedNode.linkedAchievementIds.map((achievementId) => {
+                          const achievement = skillThree.achievements.find((item) => item.id === achievementId);
+                          if (!achievement) return null;
+                          return (
+                            <div key={achievementId} className="bg-[#131313] border border-white/[0.05] rounded-lg p-3">
+                              <p className="text-xs font-black text-white mb-2">{achievement.name}</p>
+                              <span className={`text-[8px] font-black inline-block px-2 py-1 rounded ${
+                                achievement.status === "locked" ? 'text-[#adaaaa] bg-white/5' : 'text-primary bg-primary/10'
+                              }`}>
+                                {achievement.status === "locked" ? "BLOQUEADA" : "DESBLOQUEADA"}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Meta Info & Action */}
+                <div className="pt-8 space-y-4 border-t border-white/[0.05]">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex items-center justify-between px-4 py-3 bg-white/[0.02] border border-white/[0.05] rounded-lg">
+                      <span className="text-[9px] text-[#adaaaa] uppercase font-black">Último Update</span>
+                      <span className="text-[10px] font-mono text-white">2024.04.02</span>
+                    </div>
+                    <div className="flex items-center justify-between px-4 py-3 bg-white/[0.02] border border-white/[0.05] rounded-lg">
+                      <span className="text-[9px] text-[#adaaaa] uppercase font-black">Profundidade</span>
+                      <span className="text-[10px] font-mono text-white">LAYER_{selectedNode.size === "core" ? "00" : "07"}</span>
+                    </div>
+                  </div>
+                  <button className="w-full bg-gradient-to-r from-primary to-[#00e3fd] text-[#003840] py-4 rounded-lg font-black text-sm tracking-widest uppercase transition-all hover:brightness-110 active:scale-95 shadow-[0_0_20px_rgba(129,236,255,0.3)] flex items-center justify-center gap-2">
+                    Revisar Conteúdo
+                    <span>→</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </WorkspaceModal>
+
+        {/* Mission/Kata Modal */}
+        <WorkspaceModal
+          open={Boolean(selectedMission)}
+          onClose={onCloseMission}
+          title={selectedMission?.title ?? "Missão"}
+          subtitle={selectedMission?.description}
+          size="xl"
+          eyebrow={selectedMission?.window === "daily" ? "Série Diária de Katas" : "Missão Semanal"}
+        >
+          {selectedMission ? (
+            <div className="bg-[#0e0e0e]/50 -m-8 p-0 flex flex-col lg:flex-row min-h-[500px] border-t border-white/[0.05]">
+              {/* Left Section: Visual & Header (40%) */}
+              <div className="w-full lg:w-[40%] relative min-h-[300px] flex flex-col justify-end p-8 bg-[#131313] border-b lg:border-b-0 lg:border-r border-white/[0.05] overflow-hidden">
+                {/* Background visual */}
+                <div className="absolute inset-0 opacity-20">
+                  <div className="w-full h-full bg-gradient-to-br from-primary/20 via-transparent to-transparent" />
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-[#131313] via-[#131313]/40 to-transparent"></div>
+                
+                <div className="relative z-10">
+                  {/* Difficulty Badge */}
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="px-3 py-1 bg-[#ff6b6b]/10 text-[#ff6b6b] text-[10px] font-black uppercase tracking-widest rounded border border-[#ff6b6b]/30">
+                      Dificuldade: {selectedMission.rarity === "common" ? "Fácil" : selectedMission.rarity === "rare" ? "Média" : selectedMission.rarity === "epic" ? "Difícil" : "Extremo"}
+                    </span>
+                  </div>
+                  
+                  {/* Title */}
+                  <h2 className="text-3xl font-black tracking-tighter text-white mb-3 leading-none uppercase">
+                    {selectedMission.title}
+                  </h2>
+                  <p className="text-[#adaaaa] text-sm mb-6">{selectedMission.description}</p>
+                  
+                  {/* Reward & Time */}
+                  <div className="flex gap-6">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-primary uppercase tracking-widest font-black mb-1">Recompensa</span>
+                      <span className="text-2xl font-black text-white">+{selectedMission.rewardXp} XP</span>
+                    </div>
+                    <div className="w-px h-12 bg-white/[0.1]"></div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-primary uppercase tracking-widest font-black mb-1">Tempo Est.</span>
+                      <span className="text-2xl font-black text-white">15 MIN</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Section: Details & Action (60%) */}
+              <div className="w-full lg:w-[60%] p-8 md:p-12 flex flex-col">
+                <div className="space-y-8 flex-1">
+                  {/* Mission Objective */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="h-[1px] w-8 bg-primary"></div>
+                      <h3 className="text-xs font-black text-primary uppercase tracking-widest">Objetivo da Missão</h3>
+                    </div>
+                    <p className="text-[#adaaaa] leading-relaxed text-sm">
+                      Complete a tarefa proposta para ganhar experiência e desbloquear novas habilidades. Esta missão foi designada com base no seu nível de maestria e progressão atual no sistema.
+                    </p>
+                  </div>
+
+                  {/* Requirements & Tech Stack */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* Requirements */}
+                    <div className="space-y-3">
+                      <h3 className="text-xs font-black text-primary uppercase tracking-widest">Requisitos</h3>
+                      <ul className="space-y-2">
+                        <li className="flex items-center gap-2 text-xs text-white">
+                          <span className="text-primary font-black">✓</span>
+                          Aplicação prática
+                        </li>
+                        <li className="flex items-center gap-2 text-xs text-white">
+                          <span className="text-primary font-black">✓</span>
+                          Implementação completa
+                        </li>
+                        <li className="flex items-center gap-2 text-xs text-white">
+                          <span className="text-primary font-black">✓</span>
+                          Validação de resultado
+                        </li>
+                      </ul>
+                    </div>
+
+                    {/* Tech Stack / Metric */}
+                    <div className="space-y-3">
+                      <h3 className="text-xs font-black text-primary uppercase tracking-widest">Alvo</h3>
+                      <div className="space-y-2">
+                        <div className="px-3 py-2 bg-[#1a1a1a] border border-white/[0.05] rounded text-[10px] text-white font-mono">
+                          {selectedMission.metric}
+                        </div>
+                        <p className="text-xs text-[#adaaaa]">
+                          Meta: <span className="text-white font-black">{selectedMission.target}</span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Progress Indicator */}
+                  <div className="bg-[#1a1a1a] border border-white/[0.05] rounded-lg p-4 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-black text-[#adaaaa] uppercase tracking-widest">Seu Progresso</span>
+                      <span className="text-xs font-black text-primary">{Math.round(selectedMission.progressPercent)}%</span>
+                    </div>
+                    <div className="h-2 bg-[#262626] rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-primary to-[#00e3fd] shadow-[0_0_8px_rgba(129,236,255,0.8)]"
+                        style={{ width: `${selectedMission.progressPercent}%` }}
+                      />
+                    </div>
+                    <p className="text-[10px] text-[#adaaaa]">
+                      {selectedMission.completed ? "CONCLUÍDA" : `${Math.round(selectedMission.progress)} de ${selectedMission.target} itens`}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Status & Action */}
+                <div className="pt-8 space-y-4 border-t border-white/[0.05]">
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-[#adaaaa] uppercase font-black tracking-widest">Status do Operador</span>
+                      <span className="text-xs text-white font-bold flex items-center gap-2 mt-1">
+                        <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                        {selectedMission.completed ? "COMPLETADA" : "PRONTO"}
+                      </span>
+                    </div>
+                  </div>
+                  <button className="w-full px-6 py-4 bg-gradient-to-r from-primary to-[#00e3fd] text-[#003840] font-black tracking-widest uppercase rounded-lg shadow-[0px_0px_20px_rgba(129,236,255,0.4)] hover:shadow-[0px_0px_30px_rgba(129,236,255,0.6)] active:scale-95 transition-all text-sm flex items-center justify-center gap-2">
+                    {selectedMission.completed ? "REVISAR RESULTADO" : "INICIAR MISSÃO"}
+                    <span>→</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+         </WorkspaceModal>
+      </>
+   );
+ }
+
+ function LeaderboardRow({
   entry,
   position,
 }: {
