@@ -820,8 +820,6 @@ export function SupportWidget({
           viewerRole={viewerRole}
           conversationList={conversationList}
           activeConversation={activeConversation}
-          selectedConversationId={selectedConversationId}
-          onSelectConversation={setSelectedConversationId}
           messages={messages}
           composer={composer}
           onComposerChange={setComposer}
