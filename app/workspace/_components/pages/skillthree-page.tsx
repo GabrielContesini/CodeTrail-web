@@ -357,10 +357,15 @@ function SkillThreeCanvas({
     <div className="relative overflow-hidden flex-1 flex flex-col">
       <div className="relative flex-1 overflow-x-auto overflow-y-hidden px-2 py-5">
         <div
-          className="mx-auto h-[600px] min-w-[860px] origin-top transition-transform duration-200"
+          className="mx-auto h-[600px] min-w-[860px] origin-top transition-transform duration-200 relative"
           style={{ transform: `scale(${zoom})` }}
         >
-          <svg className="absolute inset-0 h-full w-full opacity-80" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <svg 
+            className="absolute inset-0 h-full w-full opacity-80 pointer-events-none" 
+            viewBox="0 0 100 100" 
+            preserveAspectRatio="xMidYMid meet"
+            style={{ width: '100%', height: '100%' }}
+          >
             {nodes.flatMap((node) =>
               node.prerequisites.map((prerequisite) => {
                 const source = nodeMap.get(prerequisite);
@@ -373,7 +378,9 @@ function SkillThreeCanvas({
                     x2={node.x}
                     y2={node.y}
                     stroke="rgba(129,236,255,0.22)"
-                    strokeWidth={node.status === "locked" ? 0.18 : 0.28}
+                    strokeWidth={node.status === "locked" ? 0.15 : 0.25}
+                    strokeLinecap="round"
+                    vectorEffect="non-scaling-stroke"
                   />
                 );
               }),
