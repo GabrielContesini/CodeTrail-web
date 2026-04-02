@@ -363,13 +363,23 @@ function SkillThreeCanvas({
           <svg 
             className="absolute inset-0 h-full w-full opacity-80 pointer-events-none" 
             viewBox="0 0 100 100" 
-            preserveAspectRatio="xMidYMid meet"
+            preserveAspectRatio="none"
             style={{ width: '100%', height: '100%' }}
           >
+            <defs>
+              <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="rgb(129,236,255)" stopOpacity="0.3" />
+                <stop offset="100%" stopColor="rgb(0,227,253)" stopOpacity="0.15" />
+              </linearGradient>
+            </defs>
             {nodes.flatMap((node) =>
               node.prerequisites.map((prerequisite) => {
                 const source = nodeMap.get(prerequisite);
                 if (!source) return null;
+                
+                const isLocked = node.status === "locked";
+                const opacity = isLocked ? 0.12 : 0.22;
+                
                 return (
                   <line
                     key={`${prerequisite}-${node.id}`}
@@ -377,10 +387,10 @@ function SkillThreeCanvas({
                     y1={source.y}
                     x2={node.x}
                     y2={node.y}
-                    stroke="rgba(129,236,255,0.22)"
-                    strokeWidth={node.status === "locked" ? 0.15 : 0.25}
+                    stroke={`rgba(129,236,255,${opacity})`}
+                    strokeWidth={isLocked ? 0.2 : 0.3}
                     strokeLinecap="round"
-                    vectorEffect="non-scaling-stroke"
+                    strokeLinejoin="round"
                   />
                 );
               }),
