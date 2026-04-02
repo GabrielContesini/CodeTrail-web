@@ -348,10 +348,32 @@ function SkillThreeCanvas({
   zoom: number;
   onSelectNode: (node: SkillThreeNodeState) => void;
 }) {
-  const nodeMap = useMemo(
-    () => new Map(nodes.map((node) => [node.id, node])),
-    [nodes],
-  );
+  // Calcular posições circulares para os nodes
+  const calculateCircularPositions = useMemo(() => {
+    const coreNode = nodes.find(n => n.size === "core");
+    const nonCoreNodes = nodes.filter(n => n.size !== "core");
+    
+    const centerX = 50;
+    const centerY = 50;
+    const radius = 35; // Raio do círculo em percentuais
+    
+    const positions = new Map<string, { x: number; y: number }>();
+    
+    // Core node no centro
+    if (coreNode) {
+      positions.set(coreNode.id, { x: centerX, y: centerY });
+    }
+    
+    // Nodes ao redor em círculo
+    nonCoreNodes.forEach((node, index) => {
+      const angle = (index / nonCoreNodes.length) * Math.PI * 2 - Math.PI / 2;
+      const x = centerX + radius * Math.cos(angle);
+      const y = centerY + radius * Math.sin(angle);
+      positions.set(node.id, { x, y });
+    });
+    
+    return positions;
+  }, [nodes]);
 
   return (
     <div className="relative overflow-hidden flex-1 flex flex-col">
@@ -360,58 +382,29 @@ function SkillThreeCanvas({
           className="mx-auto h-[600px] min-w-[860px] origin-top transition-transform duration-200 relative"
           style={{ transform: `scale(${zoom})` }}
         >
-          <svg 
-            className="absolute inset-0 h-full w-full opacity-80 pointer-events-none" 
-            viewBox="0 0 100 100" 
-            preserveAspectRatio="none"
-            style={{ width: '100%', height: '100%' }}
-          >
-            <defs>
-              <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="rgb(129,236,255)" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="rgb(0,227,253)" stopOpacity="0.15" />
-              </linearGradient>
-            </defs>
-            {nodes.flatMap((node) =>
-              node.prerequisites.map((prerequisite) => {
-                const source = nodeMap.get(prerequisite);
-                if (!source) return null;
-                
-                const isLocked = node.status === "locked";
-                const opacity = isLocked ? 0.12 : 0.22;
-                
-                return (
-                  <line
-                    key={`${prerequisite}-${node.id}`}
-                    x1={source.x}
-                    y1={source.y}
-                    x2={node.x}
-                    y2={node.y}
-                    stroke={`rgba(129,236,255,${opacity})`}
-                    strokeWidth={isLocked ? 0.2 : 0.3}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                );
-              }),
-            )}
-          </svg>
+          {/* Grid background */}
+          <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#81ecff 0.5px, transparent 0.5px)', backgroundSize: '24px 24px' }} />
 
-          {nodes.map((node) => (
-            <button
-              key={node.id}
-              type="button"
-              onClick={() => onSelectNode(node)}
-              className="absolute text-left"
-              style={{
-                left: `${node.x}%`,
-                top: `${node.y}%`,
-                transform: "translate(-50%, -50%)",
-              }}
-            >
-              <CanvasNode node={node} />
-            </button>
-          ))}
+          {nodes.map((node) => {
+            const pos = calculateCircularPositions.get(node.id);
+            if (!pos) return null;
+            
+            return (
+              <button
+                key={node.id}
+                type="button"
+                onClick={() => onSelectNode(node)}
+                className="absolute text-left transition-all duration-300"
+                style={{
+                  left: `${pos.x}%`,
+                  top: `${pos.y}%`,
+                  transform: "translate(-50%, -50%)",
+                }}
+              >
+                <CanvasNode node={node} />
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
