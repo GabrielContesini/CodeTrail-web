@@ -56,21 +56,23 @@ export function SupportChatPanel({
   onSendMessage: () => void;
 }) {
   return (
-    <AnimatePresence>
-      {open ? (
-        <motion.div
-          className="fixed inset-0 z-[88] bg-black/45 backdrop-blur-sm md:hidden"
-          onClick={closeWidget}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: reducedMotion ? 0 : 0.18 }}
-        />
-      ) : null}
-
-      <AnimatePresence>
-        {open ? (
+    <AnimatePresence mode="wait">
+      {open && (
+        <>
+          {/* Backdrop */}
           <motion.div
+            key="backdrop"
+            className="fixed inset-0 z-[88] bg-black/45 backdrop-blur-sm md:hidden"
+            onClick={closeWidget}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: reducedMotion ? 0 : 0.18 }}
+          />
+
+          {/* Chat Panel */}
+          <motion.div
+            key="chat-panel"
             className="fixed bottom-8 right-8 z-[90] w-96 h-[500px] flex flex-col overflow-hidden rounded-2xl shadow-2xl md:inset-x-auto md:right-auto md:bottom-auto"
             style={{
               backdropFilter: "blur(20px)",
@@ -203,7 +205,8 @@ export function SupportChatPanel({
                     </div>
                   ) : (
                     <div className="space-y-6">
-                      {messages.map((message, index) => {
+                      {messages.map((message) => {
+                        const index = messages.indexOf(message);
                         const previous = messages[index - 1];
                         const showDaySeparator =
                           !previous ||
@@ -211,7 +214,7 @@ export function SupportChatPanel({
                             formatDayLabel(message.createdAt);
 
                         return (
-                          <div key={message.id}>
+                          <div key={`msg-${message.id}`}>
                             {showDaySeparator ? (
                               <div className="mb-6 flex items-center justify-center">
                                 <span
@@ -315,8 +318,8 @@ export function SupportChatPanel({
               </div>
             )}
           </motion.div>
-        ) : null}
-      </AnimatePresence>
+        </>
+      )}
     </AnimatePresence>
   );
 }
