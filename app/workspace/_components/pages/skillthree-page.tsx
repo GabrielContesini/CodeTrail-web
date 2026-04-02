@@ -559,10 +559,17 @@ function SkillThreeModals({
         >
           {selectedNode ? (
             <div className="bg-[#0e0e0e]/50 -m-8 p-0 flex flex-col lg:flex-row min-h-[500px] border-t border-white/[0.05]">
-              {/* Left Section: Hero (35%) */}
-              <div className="w-full lg:w-[40%] bg-gradient-to-b from-[#1a1a1a] to-[#0e0e0e] border-b lg:border-b-0 lg:border-r border-white/[0.05] p-8 flex flex-col justify-between relative overflow-hidden">
-                {/* Background gradient effect */}
-                <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, #81ecff 0%, transparent 60%)' }} />
+               {/* Left Section: Hero (35%) */}
+               <div className="w-full lg:w-[40%] bg-gradient-to-b from-[#1a1a1a] to-[#0e0e0e] border-b lg:border-b-0 lg:border-r border-white/[0.05] p-8 flex flex-col justify-between relative overflow-hidden">
+                 {/* Background image with architecture/server theme */}
+                 <div className="absolute inset-0 opacity-30">
+                   <img 
+                     alt="Arquitetura de sistema" 
+                     className="w-full h-full object-cover grayscale" 
+                     src="https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=500&q=60"
+                   />
+                 </div>
+                 <div className="absolute inset-0 bg-gradient-to-b from-[#1a1a1a]/40 via-transparent to-[#0e0e0e]"></div>
                 
                 <div className="relative z-10 space-y-8">
                   {/* Status Badge Section */}
@@ -749,8 +756,12 @@ function SkillThreeModals({
               {/* Left Section: Visual & Header (40%) */}
               <div className="w-full lg:w-[40%] relative min-h-[300px] flex flex-col justify-end p-8 bg-[#131313] border-b lg:border-b-0 lg:border-r border-white/[0.05] overflow-hidden">
                 {/* Background visual */}
-                <div className="absolute inset-0 opacity-20">
-                  <div className="w-full h-full bg-gradient-to-br from-primary/20 via-transparent to-transparent" />
+                <div className="absolute inset-0 opacity-40">
+                  <img 
+                    alt="Ninja digital com katana" 
+                    className="w-full h-full object-cover grayscale" 
+                    src="https://images.unsplash.com/photo-1578926078328-123456789?auto=format&fit=crop&w=500&q=60"
+                  />
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-[#131313] via-[#131313]/40 to-transparent"></div>
                 
