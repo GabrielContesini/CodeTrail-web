@@ -95,49 +95,49 @@ export function SkillThreePage() {
         <div className="relative overflow-hidden rounded-[32px] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01))] px-6 py-8 shadow-[0_30px_80px_rgba(0,0,0,0.36)] sm:px-8 sm:py-10">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(129,236,255,0.14),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(0,227,253,0.12),transparent_26%)]" />
           <div className="relative flex flex-col gap-8">
-            <div className="max-w-3xl space-y-4">
-              <Pill tone="primary">{"SKILLTHREE // FIRST LINK"}</Pill>
-              <h1 className="text-4xl font-black tracking-[-0.04em] text-white sm:text-5xl lg:text-[4rem]">
-                Defina sua formação no perfil para ligar o núcleo competitivo do CodeTrail.
-              </h1>
-              <p className="max-w-2xl text-sm leading-relaxed text-text-secondary sm:text-base">
-                A SkillThree agora reflete a formação configurada em{" "}
-                <span className="text-white">Configurações &gt; Editar conta</span>.
-                É ela que define a árvore, as conquistas, as missões prioritárias
-                e o eixo visual da progressão.
-              </p>
-            </div>
-            <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-              <div className="rounded-[28px] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-6 shadow-[0_24px_64px_rgba(0,0,0,0.34)] sm:p-7">
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-primary">
-                  PROFILE CONTROL
-                </p>
-                <h2 className="mt-3 text-2xl font-black tracking-tight text-white">
-                  A formação da SkillThree é configurada no seu perfil.
-                </h2>
-                <p className="mt-3 max-w-2xl text-sm leading-relaxed text-text-secondary">
-                  Ajuste a formação em Configurações para atualizar a árvore, o leaderboard
-                  por formação e os achievements exclusivos sem depender de um seletor dentro da feature.
-                </p>
-              </div>
-              <div className="flex flex-col justify-between gap-4 rounded-[28px] bg-white/[0.03] p-6">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary">
-                    Próximo passo
-                  </p>
-                  <p className="mt-3 text-sm leading-relaxed text-text-secondary">
-                    Abra o perfil, escolha entre Dev Fullstack ou Engenheiro de Dados e volte para liberar o command center.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className="workspace-button workspace-button--primary w-full justify-center"
-                  onClick={() => router.push("/workspace/settings")}
-                >
-                  Abrir perfil
-                </button>
-              </div>
-            </div>
+             <div className="max-w-3xl space-y-4">
+               <Pill tone="primary">{"SKILLTHREE // PRIMEIRO PASSO"}</Pill>
+               <h1 className="text-4xl font-black tracking-[-0.04em] text-white sm:text-5xl lg:text-[4rem]">
+                 Configure sua formação no perfil para ativar o núcleo competitivo do CodeTrail.
+               </h1>
+               <p className="max-w-2xl text-sm leading-relaxed text-text-secondary sm:text-base">
+                 O SkillThree agora reflete a formação configurada em{" "}
+                 <span className="text-white">Configurações &gt; Editar perfil</span>.
+                 Ela define a árvore de habilidades, as conquistas, as missões prioritárias
+                 e o eixo visual da sua progressão.
+               </p>
+             </div>
+             <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+               <div className="rounded-[28px] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-6 shadow-[0_24px_64px_rgba(0,0,0,0.34)] sm:p-7">
+                 <p className="text-[10px] font-black uppercase tracking-[0.24em] text-primary">
+                   CONTROLE DE PERFIL
+                 </p>
+                 <h2 className="mt-3 text-2xl font-black tracking-tight text-white">
+                   A formação do SkillThree é configurada no seu perfil.
+                 </h2>
+                 <p className="mt-3 max-w-2xl text-sm leading-relaxed text-text-secondary">
+                   Ajuste sua formação em Configurações para atualizar a árvore de habilidades, o ranking
+                   por formação e as conquistas exclusivas sem depender de um seletor dentro da feature.
+                 </p>
+               </div>
+               <div className="flex flex-col justify-between gap-4 rounded-[28px] bg-white/[0.03] p-6">
+                 <div>
+                   <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary">
+                     Próximo passo
+                   </p>
+                   <p className="mt-3 text-sm leading-relaxed text-text-secondary">
+                     Abra seu perfil, escolha entre Dev Fullstack ou Engenheiro de Dados e volte para liberar o centro de controle.
+                   </p>
+                 </div>
+                 <button
+                   type="button"
+                   className="workspace-button workspace-button--primary w-full justify-center"
+                   onClick={() => router.push("/workspace/settings")}
+                 >
+                   Abrir perfil
+                 </button>
+               </div>
+             </div>
           </div>
         </div>
       </motion.div>
@@ -156,11 +156,11 @@ export function SkillThreePage() {
          <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-6">
            <div className="flex-1">
              <div className="flex items-center gap-2 mb-3">
-               <span className="text-[10px] font-black text-primary tracking-[0.3em] uppercase">Development Path</span>
+               <span className="text-[10px] font-black text-primary tracking-[0.3em] uppercase">Caminho de Desenvolvimento</span>
                <div className="h-px w-12 bg-primary/30" />
              </div>
              <h1 className="text-5xl sm:text-6xl font-black tracking-tighter text-white leading-none">
-               SKILL_ARCHITECTURE
+               ARQUITETURA_HABILIDADES
              </h1>
            </div>
            <div className="flex gap-3 flex-shrink-0">
@@ -169,7 +169,7 @@ export function SkillThreePage() {
                  <Zap size={18} className="text-primary" />
                </div>
                <div className="min-w-0">
-                 <p className="text-[10px] text-[#adaaaa] font-black uppercase tracking-widest leading-tight mb-0.5">XP Points</p>
+                 <p className="text-[10px] text-[#adaaaa] font-black uppercase tracking-widest leading-tight mb-0.5">Pontos XP</p>
                  <p className="text-lg font-black text-white truncate">{formatXp(skillThree.totalXp)}</p>
                </div>
              </div>
@@ -178,135 +178,135 @@ export function SkillThreePage() {
                  <Gauge size={18} className="text-primary" />
                </div>
                <div className="min-w-0">
-                 <p className="text-[10px] text-[#adaaaa] font-black uppercase tracking-widest leading-tight mb-0.5">Rank</p>
-                 <p className="text-lg font-black text-white truncate">Lv. {skillThree.level.level}</p>
+                 <p className="text-[10px] text-[#adaaaa] font-black uppercase tracking-widest leading-tight mb-0.5">Classificação</p>
+                 <p className="text-lg font-black text-white truncate">Nv. {skillThree.level.level}</p>
                </div>
              </div>
            </div>
          </header>
 
-        {/* MAIN GRID: 8 col skill tree + 4 col sidebar */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* SKILL TREE - 66% */}
-          <section className="lg:col-span-8">
-            <div className="bg-[#131313] rounded-2xl border border-white/[0.05] overflow-hidden relative min-h-[700px] flex flex-col">
-              <div className="p-6 border-b border-white/[0.05] flex justify-between items-center bg-[#1a1a1a]/40 backdrop-blur-md sticky top-0 z-10">
-                <div className="flex items-center gap-3">
-                  <Sparkles size={18} className="text-primary" />
-                  <h2 className="font-black tracking-wide text-white uppercase text-sm">Interactive Skill Web</h2>
-                </div>
-                <div className="flex gap-2">
-                  <span className="px-3 py-1.5 bg-primary/10 text-primary text-[9px] font-black rounded-full border border-primary/20 tracking-wider">
-                    ACTIVE_PATH: {skillThree.activeTrack.commandLabel}
-                  </span>
-                </div>
-              </div>
-              <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#81ecff 0.5px, transparent 0.5px)', backgroundSize: '24px 24px' }} />
-              <SkillThreeCanvas nodes={skillThree.skillTree} zoom={zoom} onSelectNode={setSelectedNode} />
-              
-              {/* FOOTER STATS */}
-              <div className="p-6 bg-[#1a1a1a]/20 border-t border-white/[0.05] grid grid-cols-3 gap-4">
-                <div className="text-center border-r border-white/[0.05]">
-                  <p className="text-[9px] text-[#adaaaa] uppercase font-black tracking-wider mb-2">Nodes Unlocked</p>
-                  <p className="text-xl font-black text-white">{skillThree.formationProgress.masteredNodes} / {skillThree.formationProgress.totalNodes}</p>
-                </div>
-                <div className="text-center border-r border-white/[0.05]">
-                  <p className="text-[9px] text-[#adaaaa] uppercase font-black tracking-wider mb-2">Mastery Points</p>
-                  <p className="text-xl font-black text-primary">{formatXp(skillThree.totalXp)}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-[9px] text-[#adaaaa] uppercase font-black tracking-wider mb-2">Next Unlock</p>
-                  <p className="text-xl font-black text-white">
-                    {skillThree.level.nextLevelXp
-                      ? `${formatXp(skillThree.level.nextLevelXp - skillThree.totalXp)} XP`
-                      : "MAX"}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* SIDEBAR - 33% */}
-          <aside className="lg:col-span-4 space-y-8">
-            {/* DAILY KATAS */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Sparkles size={18} className="text-primary" />
-                  <h3 className="text-sm font-black tracking-wider uppercase">Daily Katas</h3>
-                </div>
-                <button type="button" className="text-[10px] text-primary hover:text-primary/80 font-black tracking-wide" onClick={() => setAchievementsOpen(true)}>
-                  VIEW_ALL
-                </button>
-              </div>
-               <div className="space-y-3">
-                 {skillThree.dailyMissions.slice(0, 2).map((mission, idx) => (
-                   <div key={mission.instanceId} className="group bg-[#1a1a1a] hover:bg-[#1f1f1e] border border-white/[0.08] hover:border-primary/30 rounded-lg p-4 transition-all flex items-center gap-3 cursor-pointer">
-                     <div className="w-12 h-12 rounded-lg bg-[#262626] flex items-center justify-center group-hover:bg-primary/20 transition-colors flex-shrink-0 text-primary">
-                       {renderIcon(idx === 0 ? "zap" : "cpu", 18)}
-                     </div>
-                     <div className="flex-1 min-w-0">
-                       <div className="flex justify-between items-start gap-2">
-                         <h4 className="text-xs font-black text-white tracking-tight truncate">{mission.title}</h4>
-                         <span className={`text-[8px] font-black ${mission.completed ? 'text-primary bg-primary/10 border border-primary/30' : 'text-[#ff6b6b] bg-[#ff6b6b]/10 border border-[#ff6b6b]/30'} px-1.5 py-0.5 rounded-sm flex-shrink-0 whitespace-nowrap`}>
-                           {mission.completed ? 'DONE' : 'HARD'}
-                         </span>
-                       </div>
-                       <p className="text-[10px] text-[#adaaaa] mt-0.5 line-clamp-1">{mission.description}</p>
-                       <div className="flex items-center gap-3 mt-1.5">
-                         <span className="text-[9px] text-primary font-black">
-                           +{mission.rewardXp} XP
-                         </span>
-                         <span className="text-[9px] text-[#adaaaa]">
-                           {Math.round(mission.progressPercent)}% done
-                         </span>
-                       </div>
-                     </div>
-                   </div>
-                 ))}
+         {/* MAIN GRID: 8 col skill tree + 4 col sidebar */}
+         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+           {/* SKILL TREE - 66% */}
+           <section className="lg:col-span-8">
+             <div className="bg-[#131313] rounded-2xl border border-white/[0.05] overflow-hidden relative min-h-[700px] flex flex-col">
+               <div className="p-6 border-b border-white/[0.05] flex justify-between items-center bg-[#1a1a1a]/40 backdrop-blur-md sticky top-0 z-10">
+                 <div className="flex items-center gap-3">
+                   <Sparkles size={18} className="text-primary" />
+                   <h2 className="font-black tracking-wide text-white uppercase text-sm">Rede de Habilidades Interativa</h2>
+                 </div>
+                 <div className="flex gap-2">
+                   <span className="px-3 py-1.5 bg-primary/10 text-primary text-[9px] font-black rounded-full border border-primary/20 tracking-wider">
+                     CAMINHO_ATIVO: {skillThree.activeTrack.commandLabel}
+                   </span>
+                 </div>
                </div>
-            </div>
+               <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#81ecff 0.5px, transparent 0.5px)', backgroundSize: '24px 24px' }} />
+               <SkillThreeCanvas nodes={skillThree.skillTree} zoom={zoom} onSelectNode={setSelectedNode} />
+               
+               {/* FOOTER STATS */}
+               <div className="p-6 bg-[#1a1a1a]/20 border-t border-white/[0.05] grid grid-cols-3 gap-4">
+                 <div className="text-center border-r border-white/[0.05]">
+                   <p className="text-[9px] text-[#adaaaa] uppercase font-black tracking-wider mb-2">Nós Desbloqueados</p>
+                   <p className="text-xl font-black text-white">{skillThree.formationProgress.masteredNodes} / {skillThree.formationProgress.totalNodes}</p>
+                 </div>
+                 <div className="text-center border-r border-white/[0.05]">
+                   <p className="text-[9px] text-[#adaaaa] uppercase font-black tracking-wider mb-2">Pontos de Maestria</p>
+                   <p className="text-xl font-black text-primary">{formatXp(skillThree.totalXp)}</p>
+                 </div>
+                 <div className="text-center">
+                   <p className="text-[9px] text-[#adaaaa] uppercase font-black tracking-wider mb-2">Próximo Desbloqueio</p>
+                   <p className="text-xl font-black text-white">
+                     {skillThree.level.nextLevelXp
+                       ? `${formatXp(skillThree.level.nextLevelXp - skillThree.totalXp)} XP`
+                       : "MÁXIMO"}
+                   </p>
+                 </div>
+               </div>
+             </div>
+           </section>
 
-            {/* LEADERBOARD */}
-            <div className="bg-[#131313] border border-white/[0.05] rounded-2xl overflow-hidden shadow-2xl">
-              <div className="p-6 border-b border-white/[0.05] bg-[#1a1a1a]/40">
-                <h3 className="text-sm font-black tracking-wider uppercase mb-1">Top Operators</h3>
-                <p className="text-[10px] text-[#adaaaa] font-medium">Global System Ranking // V_2.0</p>
-              </div>
-              <div className="p-3">
-                <div className="space-y-2">
-                  {leaderboard.topThree.map((entry, index) => (
-                    <div key={entry.id} className={`flex items-center gap-3 p-3 rounded-lg transition-all ${entry.isCurrentUser ? 'bg-primary/5 border border-primary/10' : 'hover:bg-white/[0.02]'}`}>
-                      <span className={`text-xs font-black ${entry.isCurrentUser ? 'text-primary' : 'text-primary/40'} w-6 text-center`}>{String(index + 1).padStart(2, '0')}</span>
-                      <div className={`w-8 h-8 rounded-full border flex-shrink-0 ${entry.isCurrentUser ? 'border-primary shadow-[0_0_10px_rgba(129,236,255,0.3)]' : 'border-white/10'} bg-primary/10`} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-black text-white truncate">{entry.name}</p>
-                        <p className="text-[9px] text-[#adaaaa] font-medium">{entry.isCurrentUser ? 'YOU' : `Lv. ${entry.level}`}</p>
+           {/* SIDEBAR - 33% */}
+            <aside className="lg:col-span-4 space-y-8">
+             {/* DAILY KATAS */}
+             <div className="space-y-4">
+               <div className="flex items-center justify-between">
+                 <div className="flex items-center gap-2">
+                   <Sparkles size={18} className="text-primary" />
+                   <h3 className="text-sm font-black tracking-wider uppercase">Katas Diárias</h3>
+                 </div>
+                 <button type="button" className="text-[10px] text-primary hover:text-primary/80 font-black tracking-wide" onClick={() => setAchievementsOpen(true)}>
+                   VER_TUDO
+                 </button>
+               </div>
+                <div className="space-y-3">
+                  {skillThree.dailyMissions.slice(0, 2).map((mission, idx) => (
+                    <div key={mission.instanceId} className="group bg-[#1a1a1a] hover:bg-[#1f1f1e] border border-white/[0.08] hover:border-primary/30 rounded-lg p-4 transition-all flex items-center gap-3 cursor-pointer">
+                      <div className="w-12 h-12 rounded-lg bg-[#262626] flex items-center justify-center group-hover:bg-primary/20 transition-colors flex-shrink-0 text-primary">
+                        {renderIcon(idx === 0 ? "zap" : "cpu", 18)}
                       </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-[10px] font-black text-primary tracking-tight">{formatXp(entry.weeklyXp)} XP</p>
-                        <div className="flex gap-0.5 justify-end mt-0.5">
-                          <div className="w-1 h-1 bg-primary rounded-full"></div>
-                          <div className={`w-1 h-1 ${entry.isCurrentUser ? 'bg-primary' : 'bg-white/20'} rounded-full`}></div>
-                          <div className={`w-1 h-1 ${index === 0 ? 'bg-primary' : 'bg-white/20'} rounded-full`}></div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start gap-2">
+                          <h4 className="text-xs font-black text-white tracking-tight truncate">{mission.title}</h4>
+                          <span className={`text-[8px] font-black ${mission.completed ? 'text-primary bg-primary/10 border border-primary/30' : 'text-[#ff6b6b] bg-[#ff6b6b]/10 border border-[#ff6b6b]/30'} px-1.5 py-0.5 rounded-sm flex-shrink-0 whitespace-nowrap`}>
+                            {mission.completed ? 'CONCLUÍDA' : 'DIFÍCIL'}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-[#adaaaa] mt-0.5 line-clamp-1">{mission.description}</p>
+                        <div className="flex items-center gap-3 mt-1.5">
+                          <span className="text-[9px] text-primary font-black">
+                            +{mission.rewardXp} XP
+                          </span>
+                          <span className="text-[9px] text-[#adaaaa]">
+                            {Math.round(mission.progressPercent)}% concluído
+                          </span>
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
-              </div>
-              <button type="button" className="w-full p-4 bg-[#1a1a1a] hover:bg-[#20201f] text-[10px] font-black text-[#adaaaa] tracking-[0.15em] transition-all uppercase border-t border-white/[0.05]" onClick={() => setLeaderboardOpen(true)}>
-                Full Leaderboard View
-              </button>
-            </div>
+             </div>
 
-            {/* MASTERY MEDALS */}
-            <div className="bg-[#131313] border border-white/[0.05] rounded-2xl p-6">
-              <h3 className="text-sm font-black tracking-wider uppercase mb-4">Mastery Medals</h3>
-              <div className="grid grid-cols-4 gap-3">
-                {[0, 1, 2, 3].map((idx) => {
-                  const achievement = skillThree.unlockedAchievements[idx];
-                  const isUnlocked = achievement && achievement.status !== "locked";
+             {/* LEADERBOARD */}
+             <div className="bg-[#131313] border border-white/[0.05] rounded-2xl overflow-hidden shadow-2xl">
+               <div className="p-6 border-b border-white/[0.05] bg-[#1a1a1a]/40">
+                 <h3 className="text-sm font-black tracking-wider uppercase mb-1">Operadores Top</h3>
+                 <p className="text-[10px] text-[#adaaaa] font-medium">Ranking Global do Sistema // V_2.0</p>
+               </div>
+               <div className="p-3">
+                 <div className="space-y-2">
+                   {leaderboard.topThree.map((entry, index) => (
+                     <div key={entry.id} className={`flex items-center gap-3 p-3 rounded-lg transition-all ${entry.isCurrentUser ? 'bg-primary/5 border border-primary/10' : 'hover:bg-white/[0.02]'}`}>
+                       <span className={`text-xs font-black ${entry.isCurrentUser ? 'text-primary' : 'text-primary/40'} w-6 text-center`}>{String(index + 1).padStart(2, '0')}</span>
+                       <div className={`w-8 h-8 rounded-full border flex-shrink-0 ${entry.isCurrentUser ? 'border-primary shadow-[0_0_10px_rgba(129,236,255,0.3)]' : 'border-white/10'} bg-primary/10`} />
+                       <div className="flex-1 min-w-0">
+                         <p className="text-xs font-black text-white truncate">{entry.name}</p>
+                         <p className="text-[9px] text-[#adaaaa] font-medium">{entry.isCurrentUser ? 'VOCÊ' : `Nv. ${entry.level}`}</p>
+                       </div>
+                       <div className="text-right flex-shrink-0">
+                         <p className="text-[10px] font-black text-primary tracking-tight">{formatXp(entry.weeklyXp)} XP</p>
+                         <div className="flex gap-0.5 justify-end mt-0.5">
+                           <div className="w-1 h-1 bg-primary rounded-full"></div>
+                           <div className={`w-1 h-1 ${entry.isCurrentUser ? 'bg-primary' : 'bg-white/20'} rounded-full`}></div>
+                           <div className={`w-1 h-1 ${index === 0 ? 'bg-primary' : 'bg-white/20'} rounded-full`}></div>
+                         </div>
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               </div>
+               <button type="button" className="w-full p-4 bg-[#1a1a1a] hover:bg-[#20201f] text-[10px] font-black text-[#adaaaa] tracking-[0.15em] transition-all uppercase border-t border-white/[0.05]" onClick={() => setLeaderboardOpen(true)}>
+                 Ver Ranking Completo
+               </button>
+             </div>
+
+             {/* MASTERY MEDALS */}
+             <div className="bg-[#131313] border border-white/[0.05] rounded-2xl p-6">
+               <h3 className="text-sm font-black tracking-wider uppercase mb-4">Medalhas de Maestria</h3>
+               <div className="grid grid-cols-4 gap-3">
+                 {[0, 1, 2, 3].map((idx) => {
+                   const achievement = skillThree.unlockedAchievements[idx];
+                   const isUnlocked = achievement && achievement.status !== "locked";
                   
                   return (
                     <div 
@@ -499,80 +499,80 @@ function SkillThreeModals({
 }) {
   return (
     <>
-      <WorkspaceModal
-        open={achievementsOpen}
-        onClose={onCloseAchievements}
-        title="Achievement Matrix"
-        subtitle="Catálogo vivo da sua progressão universal e da formação ativa."
-        size="xl"
-        eyebrow="SkillThree Registry"
-      >
-        <div className="grid gap-4 md:grid-cols-2">
-          {skillThree.achievements.map((achievement) => (
-            <AchievementCard key={achievement.id} achievement={achievement} />
-          ))}
-        </div>
-      </WorkspaceModal>
+       <WorkspaceModal
+         open={achievementsOpen}
+         onClose={onCloseAchievements}
+         title="Matriz de Conquistas"
+         subtitle="Catálogo vivo da sua progressão universal e da formação ativa."
+         size="xl"
+         eyebrow="Registro SkillThree"
+       >
+         <div className="grid gap-4 md:grid-cols-2">
+           {skillThree.achievements.map((achievement) => (
+             <AchievementCard key={achievement.id} achievement={achievement} />
+           ))}
+         </div>
+       </WorkspaceModal>
 
-      <WorkspaceModal
-        open={leaderboardOpen}
-        onClose={onCloseLeaderboard}
-        title="Leaderboard"
-        subtitle="Leitura completa do ranking global, semanal e por formação."
-        size="lg"
-        eyebrow="Competition Layer"
-      >
-        <div className="mb-4 flex flex-wrap gap-2">
-          {(["global", "weekly", "track"] as SkillThreeLeaderboardScope[]).map((scope) => (
-            <button
-              key={scope}
-              type="button"
-              className={scope === leaderboardScope ? "workspace-button workspace-button--primary" : "workspace-button workspace-button--ghost"}
-              onClick={() => onChangeScope(scope)}
-            >
-              {scope === "global" ? "Global" : scope === "weekly" ? "Semanal" : "Formação"}
-            </button>
-          ))}
-        </div>
-        <div className="space-y-3">
-          {leaderboard.entries.map((entry, index) => (
-            <LeaderboardRow key={`${entry.id}-${leaderboardScope}`} entry={entry} position={index + 1} />
-          ))}
-        </div>
-      </WorkspaceModal>
+       <WorkspaceModal
+         open={leaderboardOpen}
+         onClose={onCloseLeaderboard}
+         title="Ranking"
+         subtitle="Leitura completa do ranking global, semanal e por formação."
+         size="lg"
+         eyebrow="Camada de Competição"
+       >
+         <div className="mb-4 flex flex-wrap gap-2">
+           {(["global", "weekly", "track"] as SkillThreeLeaderboardScope[]).map((scope) => (
+             <button
+               key={scope}
+               type="button"
+               className={scope === leaderboardScope ? "workspace-button workspace-button--primary" : "workspace-button workspace-button--ghost"}
+               onClick={() => onChangeScope(scope)}
+             >
+               {scope === "global" ? "Global" : scope === "weekly" ? "Semanal" : "Formação"}
+             </button>
+           ))}
+         </div>
+         <div className="space-y-3">
+           {leaderboard.entries.map((entry, index) => (
+             <LeaderboardRow key={`${entry.id}-${leaderboardScope}`} entry={entry} position={index + 1} />
+           ))}
+         </div>
+       </WorkspaceModal>
 
-      <WorkspaceModal
-        open={Boolean(selectedNode)}
-        onClose={onCloseNode}
-        title={selectedNode?.label ?? "Node"}
-        subtitle={selectedNode?.description}
-        size="md"
-        eyebrow={selectedNode?.domain ?? "Skill Tree"}
-      >
-        {selectedNode ? (
-          <div className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <MetricCard
-                label="Status"
-                value={selectedNode.status.toUpperCase()}
-                helper={selectedNode.remainingLabel}
-                icon={<Cpu size={18} />}
-              />
-              <MetricCard
-                label="Reward"
-                value={`+${selectedNode.rewardXp} XP`}
-                helper={`Lv. recomendado ${selectedNode.recommendedLevel}`}
-                icon={<Zap size={18} />}
-              />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-text-secondary">
-                  Progresso do node
-                </span>
-                <span className="text-sm font-bold text-primary">
-                  {selectedNode.remainingLabel}
-                </span>
+       <WorkspaceModal
+         open={Boolean(selectedNode)}
+         onClose={onCloseNode}
+         title={selectedNode?.label ?? "Nó"}
+         subtitle={selectedNode?.description}
+         size="md"
+         eyebrow={selectedNode?.domain ?? "Árvore de Habilidades"}
+       >
+         {selectedNode ? (
+           <div className="space-y-4">
+             <div className="grid gap-4 sm:grid-cols-2">
+               <MetricCard
+                 label="Status"
+                 value={selectedNode.status === "locked" ? "BLOQUEADO" : selectedNode.status === "available" ? "DISPONÍVEL" : selectedNode.status === "in_progress" ? "EM PROGRESSO" : selectedNode.status === "unlocked" ? "DESBLOQUEADO" : "DOMINADO"}
+                 helper={selectedNode.remainingLabel}
+                 icon={<Cpu size={18} />}
+               />
+               <MetricCard
+                 label="Recompensa"
+                 value={`+${selectedNode.rewardXp} XP`}
+                 helper={`Nv. recomendado ${selectedNode.recommendedLevel}`}
+                 icon={<Zap size={18} />}
+               />
+             </div>
+             <div className="space-y-2">
+               <div className="flex items-center justify-between gap-4">
+                 <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-text-secondary">
+                   Progresso do Nó
+                 </span>
+                 <span className="text-sm font-bold text-primary">
+                   {selectedNode.remainingLabel}
+                 </span>
               </div>
               <ProgressBar value={selectedNode.progressPercent} />
             </div>
