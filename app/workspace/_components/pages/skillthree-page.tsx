@@ -454,7 +454,7 @@ function CanvasNode({ node }: { node: SkillThreeNodeState }) {
                 {renderIcon(node.icon, 15)}
               </div>
               <span className="text-[7px] font-black uppercase text-primary bg-primary/10 px-1 py-0.5 rounded whitespace-nowrap">
-                {node.status === "mastered" ? "MASTERED" : node.status === "in_progress" ? "IN" : "LOCK"}
+                {node.status === "mastered" ? "DOMINADO" : node.status === "in_progress" ? "EM PROG" : "BLOQ"}
               </span>
             </div>
             <div className="flex-1 min-w-0">
@@ -469,7 +469,7 @@ function CanvasNode({ node }: { node: SkillThreeNodeState }) {
           <div className="flex items-center justify-center h-full">
             <div className="flex flex-col items-center gap-1">
               <div className="text-3xl text-primary">{renderIcon(node.icon, 32)}</div>
-              <span className="text-[7px] font-black uppercase text-white tracking-wider">Core</span>
+              <span className="text-[7px] font-black uppercase text-white tracking-wider">Núcleo</span>
             </div>
           </div>
         )}
