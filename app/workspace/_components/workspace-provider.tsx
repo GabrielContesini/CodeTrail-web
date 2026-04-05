@@ -47,6 +47,7 @@ import {
   applyFlashcardReview,
   buildDefaultSettings,
   featureAccess,
+  sortByIsoDesc,
 } from "@/utils/workspace/helpers";
 import type {
   AppSettingsRow,
@@ -54,6 +55,7 @@ import type {
   BillingSnapshot,
   FlashcardRow,
   MindMapRow,
+  NotificationRow,
   ProfileRow,
   ProjectRow,
   ProjectStepRow,
@@ -153,6 +155,42 @@ export function WorkspaceProvider({
     setData(result);
     setError(result.errors.length ? result.errors.join(" | ") : null);
   }
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`notifications:${initialUser.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${initialUser.id}`,
+        },
+        (payload) => {
+          if (!payload.new) return;
+          const nextNotification = payload.new as NotificationRow;
+          setData((current) => {
+            if (!current) return current;
+            const nextNotifications = sortByIsoDesc(
+              [
+                ...current.notifications.filter(
+                  (item) => item.id !== nextNotification.id,
+                ),
+                nextNotification,
+              ],
+              "created_at",
+            ) as NotificationRow[];
+            return { ...current, notifications: nextNotifications };
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [initialUser.id, supabase]);
 
   function applyBillingState(snapshot: BillingSnapshot) {
     setData((current) =>

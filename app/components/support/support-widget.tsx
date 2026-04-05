@@ -31,6 +31,7 @@ import {
   type Dispatch,
   type FormEvent,
   type KeyboardEvent,
+  type MutableRefObject,
   type SetStateAction,
 } from "react";
 
@@ -84,6 +85,8 @@ export function SupportWidget({
   const { hoverLift, press, transition } = useMotionPreferences();
   const prefillAttemptedRef = useRef(false);
   const threadRefreshLockRef = useRef(false);
+  const lastIncomingMessageAtRef = useRef<Map<string, string>>(new Map());
+  const lastConversationSeenAtRef = useRef<Map<string, string>>(new Map());
   const [open, setOpen] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
   const [authResolved, setAuthResolved] = useState(!prefillAuthenticatedUser);
@@ -107,6 +110,8 @@ export function SupportWidget({
   const [chatThreadLoading, setChatThreadLoading] = useState(false);
   const [chatSending, setChatSending] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [conversationList, setConversationList] = useState<
     SupportChatConversationSummary[]
   >([]);
@@ -115,6 +120,7 @@ export function SupportWidget({
   >(null);
   const [messages, setMessages] = useState<LocalChatMessage[]>([]);
   const [composer, setComposer] = useState("");
+  const supabaseNotificationClient = useMemo(() => createClient(), []);
 
   const activeConversation = useMemo(
     () =>
@@ -196,6 +202,7 @@ export function SupportWidget({
           return;
         }
 
+        setCurrentUserId(user.id);
         let fullName =
           typeof user.user_metadata.full_name === "string"
             ? user.user_metadata.full_name
@@ -242,6 +249,7 @@ export function SupportWidget({
       const user = session?.user ?? null;
 
       if (!user) {
+        setCurrentUserId(null);
         setAuthenticated(false);
         setChatStorageReady(false);
         setConversationList([]);
@@ -250,6 +258,7 @@ export function SupportWidget({
         return;
       }
 
+      setCurrentUserId(user.id);
       let fullName =
         typeof user.user_metadata.full_name === "string"
           ? user.user_metadata.full_name
@@ -283,6 +292,34 @@ export function SupportWidget({
       subscription.unsubscribe();
     };
   }, [prefillAuthenticatedUser]);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    let active = true;
+
+    async function loadNotificationPreference() {
+      try {
+        const { data: settings } = await supabaseNotificationClient
+          .from("app_settings")
+          .select("notifications_enabled")
+          .eq("user_id", currentUserId)
+          .maybeSingle();
+
+        if (active && settings) {
+          setNotificationsEnabled(settings.notifications_enabled);
+        }
+      } catch {
+        // Mantém habilitado por padrão se não conseguir ler.
+      }
+    }
+
+    void loadNotificationPreference();
+
+    return () => {
+      active = false;
+    };
+  }, [currentUserId, supabaseNotificationClient]);
 
   useEffect(() => {
     if (!authResolved || !authenticated || !hasSupabaseClientEnv()) {
@@ -338,6 +375,15 @@ export function SupportWidget({
         setSelectedConversationId((current) =>
           getNextSelectedConversationId(current, nextConversations),
         );
+
+        if (currentUserId && notificationsEnabled) {
+          void notifyFromConversationSummaries(
+            nextConversations,
+            currentUserId,
+            lastConversationSeenAtRef,
+            supabaseNotificationClient,
+          );
+        }
       } catch {
         if (!active) {
           return;
@@ -541,6 +587,18 @@ export function SupportWidget({
           upsertConversation(current, result.conversation),
         );
         setMessages(result.messages ?? []);
+
+        if (result.conversation && result.messages) {
+          void handleIncomingNotifications(
+            result.messages,
+            result.conversation,
+            nextViewerRole,
+            currentUserId,
+            notificationsEnabled,
+            lastIncomingMessageAtRef,
+            supabaseNotificationClient,
+          );
+        }
 
         if (hasUnreadIncomingMessage(result.messages ?? [], nextViewerRole)) {
           await markConversationAsRead(
@@ -796,7 +854,7 @@ export function SupportWidget({
       >
         <span className="relative flex h-9 w-9 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-primary">
           <LifeBuoy size={16} />
-          {showChatPanel && unreadCount > 0 ? (
+          {unreadCount > 0 ? (
             <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-black text-[#04232b]">
               {unreadCount > 99 ? "99+" : unreadCount}
             </span>
@@ -969,5 +1027,115 @@ async function readJson<T>(response: Response) {
     return (await response.json()) as T;
   } catch {
     return null;
+  }
+}
+
+function buildSupportNotificationPayload(preview: string, userId: string) {
+  const normalized =
+    sanitizeSupportMessageBody(preview).replace(/\s+/g, " ").slice(0, 140) ||
+    "Nova mensagem de suporte.";
+
+  return {
+    type: "system" as const,
+    title: "Nova mensagem do suporte",
+    message: normalized,
+    link: null,
+    is_read: false,
+    user_id: userId,
+    created_at: new Date().toISOString(),
+    read_at: null,
+  };
+}
+
+async function insertSupportNotification(
+  client: ReturnType<typeof createClient>,
+  payload: ReturnType<typeof buildSupportNotificationPayload>,
+) {
+  try {
+    await client.from("notifications").insert(payload);
+  } catch {
+    // Em caso de falha, segue sem bloquear o chat.
+  }
+}
+
+function getLatestIncomingAt(
+  messages: SupportChatMessage[],
+  viewerRole: SupportChatViewerRole,
+) {
+  return messages
+    .filter((message) => message.senderRole !== viewerRole)
+    .reduce<string | null>((latest, message) => {
+      return !latest || message.createdAt > latest ? message.createdAt : latest;
+    }, null);
+}
+
+async function handleIncomingNotifications(
+  messages: SupportChatMessage[],
+  conversation: SupportChatConversationSummary,
+  viewerRole: SupportChatViewerRole,
+  currentUserId: string | null,
+  notificationsEnabled: boolean,
+  lastIncomingMessageAtRef: MutableRefObject<Map<string, string>>,
+  client: ReturnType<typeof createClient>,
+) {
+  if (!currentUserId || !notificationsEnabled) {
+    return;
+  }
+
+  const latestIncomingAt = getLatestIncomingAt(messages, viewerRole);
+
+  if (!latestIncomingAt) {
+    return;
+  }
+
+  const previous = lastIncomingMessageAtRef.current.get(conversation.id);
+  lastIncomingMessageAtRef.current.set(conversation.id, latestIncomingAt);
+
+  if (!previous) {
+    return;
+  }
+
+  const newMessages = messages.filter(
+    (message) =>
+      message.senderRole !== viewerRole && message.createdAt > previous,
+  );
+
+  if (!newMessages.length) {
+    return;
+  }
+
+  await Promise.all(
+    newMessages.map((message) =>
+      insertSupportNotification(
+        client,
+        buildSupportNotificationPayload(message.body, currentUserId),
+      ),
+    ),
+  );
+}
+
+async function notifyFromConversationSummaries(
+  conversations: SupportChatConversationSummary[],
+  currentUserId: string,
+  lastConversationSeenAtRef: MutableRefObject<Map<string, string>>,
+  client: ReturnType<typeof createClient>,
+) {
+  for (const conversation of conversations) {
+    const lastAt = conversation.lastMessageAt ?? conversation.updatedAt;
+    if (!lastAt) continue;
+    const previous = lastConversationSeenAtRef.current.get(conversation.id);
+    lastConversationSeenAtRef.current.set(conversation.id, lastAt);
+
+    if (!previous) continue;
+    if (lastAt <= previous) continue;
+    if (conversation.unreadCountForViewer <= 0) continue;
+
+    await insertSupportNotification(
+      client,
+      buildSupportNotificationPayload(
+        conversation.lastMessagePreview || "Nova mensagem de suporte.",
+        currentUserId,
+      ),
+    );
   }
 }
