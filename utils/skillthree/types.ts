@@ -68,6 +68,7 @@ export interface SkillThreeMissionState {
 export interface SkillThreeLeaderboardEntry {
   id: string;
   name: string;
+  avatarUrl: string | null;
   badge: string;
   rankLabel: string;
   level: number;

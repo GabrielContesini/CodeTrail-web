@@ -10,6 +10,7 @@ import {
     useMotionPreferences,
 } from "@/app/components/ui/motion-system";
 import { useWorkspace } from "@/app/workspace/_components/workspace-provider";
+import { PRIVACY_PREFERENCES_OPEN_EVENT } from "@/utils/privacy/preferences";
 import {
     getInitials,
     navigationItems,
@@ -35,6 +36,7 @@ import {
     RefreshCcw,
     Search,
     Settings,
+    ShieldCheck,
     Sparkles,
     X,
 } from "lucide-react";
@@ -475,15 +477,19 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
                   </span>
                 )}
               </motion.button>
-              <Link href="/workspace/settings" title="Configurações">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="text-on-surface-variant hover:text-primary transition-all p-1"
-                >
-                  <Settings size={18} />
-                </motion.button>
-              </Link>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() =>
+                  window.dispatchEvent(
+                    new CustomEvent(PRIVACY_PREFERENCES_OPEN_EVENT),
+                  )
+                }
+                className="text-on-surface-variant hover:text-primary transition-all p-1"
+                title="Privacidade"
+              >
+                <ShieldCheck size={18} />
+              </motion.button>
 
               <motion.button
                 whileHover={{ scale: 1.05 }}

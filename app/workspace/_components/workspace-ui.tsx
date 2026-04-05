@@ -282,12 +282,22 @@ export function EmptyState({
 }
 
 export function WorkspaceModal({
+  eyebrow,
+  size = "md",
+  fullBleed = false,
+  hideFooterDecor = fullBleed,
+  bodyClassName,
   title,
   subtitle,
   open,
   onClose,
   children,
 }: {
+  eyebrow?: string;
+  size?: "md" | "lg" | "xl" | "2xl";
+  fullBleed?: boolean;
+  hideFooterDecor?: boolean;
+  bodyClassName?: string;
   title: string;
   subtitle?: string;
   open: boolean;
@@ -295,6 +305,15 @@ export function WorkspaceModal({
   children: ReactNode;
 }) {
   const reducedMotion = useStableReducedMotion();
+  const sizeClass =
+    size === "2xl"
+      ? "max-w-7xl"
+      : size === "xl"
+        ? "max-w-6xl"
+        : size === "lg"
+          ? "max-w-3xl"
+          : "max-w-xl";
+
   return (
     <AnimatePresence>
       {open ? (
@@ -324,13 +343,16 @@ export function WorkspaceModal({
             }}
           />
           <motion.div
-            className="glass-panel relative z-10 flex max-h-[90vh] w-full max-w-xl flex-col rounded-2xl border border-white/10 shadow-[0px_20px_40px_rgba(0,0,0,0.6)]"
+            className={cx(
+              "glass-panel relative z-10 flex max-h-[90vh] w-full flex-col rounded-2xl border border-white/10 shadow-[0px_20px_40px_rgba(0,0,0,0.6)]",
+              sizeClass,
+            )}
             variants={modalVariants(reducedMotion)}
           >
             <header className="flex shrink-0 items-start justify-between gap-4 border-b border-white/5 px-8 py-6 sm:px-8">
               <div className="flex flex-col gap-1.5">
                 <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
-                  System Request
+                  {eyebrow ?? "System Request"}
                 </span>
                 <h2 className="m-0 text-2xl font-black tracking-tighter text-on-surface">
                   {title}
@@ -360,15 +382,20 @@ export function WorkspaceModal({
               </button>
             </header>
             <motion.div
-              className="overflow-y-auto px-8 py-6 sm:px-8 sm:py-6"
+              className={cx(
+                "overflow-y-auto",
+                fullBleed ? "p-0" : "px-8 py-6 sm:px-8 sm:py-6",
+                bodyClassName,
+              )}
               layout="position"
             >
               {children}
             </motion.div>
-            <div className="border-t border-white/5 bg-surface-container-highest/30 px-8 py-3 flex justify-end">
-              {/* Footer decorator */}
-              <div className="w-32 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent"></div>
-            </div>
+            {hideFooterDecor ? null : (
+              <div className="border-t border-white/5 bg-surface-container-highest/30 px-8 py-3 flex justify-end">
+                <div className="w-32 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent"></div>
+              </div>
+            )}
           </motion.div>
         </motion.div>
       ) : null}

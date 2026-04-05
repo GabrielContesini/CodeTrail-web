@@ -22,6 +22,7 @@ import {
   Mail,
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -446,6 +447,26 @@ export default function AuthPage() {
                   </>
                 )}
               </button>
+
+              {!isLogin ? (
+                <p className="text-xs leading-relaxed text-text-secondary">
+                  Ao criar sua conta, você concorda com os{" "}
+                  <Link
+                    href="/termos-de-uso"
+                    className="font-semibold text-primary underline decoration-primary/35 underline-offset-4 transition-colors hover:text-white"
+                  >
+                    Termos de Uso
+                  </Link>{" "}
+                  e reconhece a{" "}
+                  <Link
+                    href="/politica-de-privacidade"
+                    className="font-semibold text-primary underline decoration-primary/35 underline-offset-4 transition-colors hover:text-white"
+                  >
+                    Política de Privacidade
+                  </Link>
+                  .
+                </p>
+              ) : null}
             </form>
 
             {/* Divider */}
@@ -511,8 +532,18 @@ export default function AuthPage() {
             © 2025 CodeTrail Lab. Acesso Exclusivo.
           </span>
           <div className="flex gap-6 opacity-60">
-            <a className="text-[10px] uppercase tracking-widest font-bold text-text-secondary hover:text-primary transition-all duration-200 hover:opacity-100" href="#">Política de Privacidade</a>
-            <a className="text-[10px] uppercase tracking-widest font-bold text-text-secondary hover:text-primary transition-all duration-200 hover:opacity-100" href="#">Termos de Uso</a>
+            <Link
+              className="text-[10px] uppercase tracking-widest font-bold text-text-secondary hover:text-primary transition-all duration-200 hover:opacity-100"
+              href="/politica-de-privacidade"
+            >
+              Política de Privacidade
+            </Link>
+            <Link
+              className="text-[10px] uppercase tracking-widest font-bold text-text-secondary hover:text-primary transition-all duration-200 hover:opacity-100"
+              href="/termos-de-uso"
+            >
+              Termos de Uso
+            </Link>
             <a className="text-[10px] uppercase tracking-widest font-bold text-text-secondary hover:text-primary transition-all duration-200 hover:opacity-100" href="#">Status da API</a>
           </div>
         </footer>

@@ -57,9 +57,7 @@ export function buildSkillThreeExperience(
     activeTrack: {
       id: activeBlueprint.track.id,
       name: activeBlueprint.track.name,
-      commandLabel: activeBlueprint.track.name
-        .toUpperCase()
-        .replace(/[^A-Z0-9]+/g, "_"),
+      commandLabel: activeBlueprint.track.name,
     },
     totalXp,
     level,
@@ -110,7 +108,7 @@ function emptySkillThreeExperience(): SkillThreeExperience {
 }
 
 function buildSkillTree(blueprint: TrackBlueprint): SkillThreeNodeState[] {
-  return blueprint.skills.slice(0, 8).map((skill, index) => {
+  return blueprint.skills.map((skill, index) => {
     const progress = Math.round(
       blueprint.progressBySkill[skill.id]?.progress_percent ?? 0,
     );
@@ -118,7 +116,7 @@ function buildSkillTree(blueprint: TrackBlueprint): SkillThreeNodeState[] {
     return {
       id: skill.id,
       label: skill.name,
-      shortLabel: shortenLabel(skill.name),
+      shortLabel: skill.name,
       description: skill.description,
       domain: blueprint.track.name,
       icon: ICON_SEQUENCE[index % ICON_SEQUENCE.length],
@@ -248,11 +246,16 @@ function buildTaskMission(
   }
 
   const progress = task.status === "in_progress" ? 0.55 : 0.1;
+  const sanitizedTitle = sanitizeMissionTaskTitle(task.title);
+  const sanitizedDescription = sanitizeMissionTaskDescription(
+    task.description,
+    trackName,
+  );
 
   return {
     instanceId: `mission-task-${task.id}`,
-    title: task.title,
-    description: task.description || `Concluir a próxima entrega priorizada de ${trackName}.`,
+    title: sanitizedTitle,
+    description: sanitizedDescription,
     rewardXp: task.priority === "critical" ? 240 : task.priority === "high" ? 180 : 120,
     progressPercent: progress * 100,
     progress,
@@ -267,6 +270,35 @@ function buildTaskMission(
           ? "epic"
           : "rare",
   };
+}
+
+function sanitizeMissionTaskTitle(value: string) {
+  const title = value.trim();
+  if (!title) {
+    return "Entrega prioritária do workspace";
+  }
+
+  if (/^(tarefa\s+)?task-[a-z0-9-]+$/i.test(title)) {
+    return "Entrega prioritária do workspace";
+  }
+
+  return title;
+}
+
+function sanitizeMissionTaskDescription(
+  value: string | null | undefined,
+  trackName: string,
+) {
+  const description = value?.trim() ?? "";
+  if (!description) {
+    return `Concluir a próxima entrega priorizada de ${trackName}.`;
+  }
+
+  if (/^descricao\s+task-[a-z0-9-]+$/i.test(description)) {
+    return `Concluir a próxima entrega priorizada de ${trackName}.`;
+  }
+
+  return description;
 }
 
 function buildReviewMission(
@@ -387,69 +419,31 @@ function buildLeaderboard(
   const rankLabel = labelForSkillLevel(
     data.profile?.current_level ?? data.goal?.current_level ?? "beginner",
   );
+  const currentAvatarUrl = data.profile?.avatar_url ?? null;
 
   const baseEntries: SkillThreeLeaderboardEntry[] = [
     {
-      id: "operator-0",
-      name: "Maya Vertex",
-      badge: "LAB_CORE",
-      rankLabel: "Arquiteta de trilha",
-      level: Math.max(currentLevel + 2, 5),
-      weeklyXp: totalXp + 420,
-      positionDelta: 1,
-      isCurrentUser: false,
-    },
-    {
-      id: "operator-1",
-      name: "Caio Pulse",
-      badge: trackName.toUpperCase().slice(0, 10),
-      rankLabel: "Especialista de execução",
-      level: Math.max(currentLevel + 1, 4),
-      weeklyXp: totalXp + 180,
-      positionDelta: -1,
-      isCurrentUser: false,
-    },
-    {
-      id: "operator-current",
+      id: data.profile?.id ?? "operator-current",
       name: currentName,
-      badge: "VOCÊ",
+      avatarUrl: currentAvatarUrl,
+      badge: trackName.toUpperCase().slice(0, 10) || "VOCÊ",
       rankLabel,
       level: currentLevel,
       weeklyXp: totalXp,
-      positionDelta: 2,
+      positionDelta: 0,
       isCurrentUser: true,
     },
-    {
-      id: "operator-3",
-      name: "Iris Cache",
-      badge: "SYNC",
-      rankLabel: "Operadora de retenção",
-      level: Math.max(currentLevel - 1, 2),
-      weeklyXp: Math.max(totalXp - 120, 80),
-      positionDelta: 0,
-      isCurrentUser: false,
-    },
-    {
-      id: "operator-4",
-      name: "Theo Runtime",
-      badge: "EDGE",
-      rankLabel: "Executor de missões",
-      level: Math.max(currentLevel - 1, 2),
-      weeklyXp: Math.max(totalXp - 220, 60),
-      positionDelta: -2,
-      isCurrentUser: false,
-    },
-  ].sort((left, right) => right.weeklyXp - left.weeklyXp);
+  ];
 
   const weeklyEntries = baseEntries.map((entry, index) => ({
     ...entry,
-    weeklyXp: Math.max(entry.weeklyXp - index * 25, 40),
+    weeklyXp: Math.max(Math.round(entry.weeklyXp * 0.32) - index * 25, 40),
   }));
 
-  const trackEntries = baseEntries.map((entry, index) => ({
+  const trackEntries = baseEntries.map((entry) => ({
     ...entry,
     badge: trackName.toUpperCase().slice(0, 10),
-    weeklyXp: Math.max(entry.weeklyXp - index * 15, 50),
+    weeklyXp: entry.weeklyXp,
   }));
 
   return {
@@ -486,18 +480,4 @@ function resolveNodeStatus(progress: number, index: number): SkillThreeNodeState
   }
 
   return "locked";
-}
-
-function shortenLabel(value: string) {
-  const parts = value.trim().split(/\s+/).filter(Boolean);
-
-  if (parts.length === 0) {
-    return "NODE";
-  }
-
-  if (parts.length === 1) {
-    return parts[0].slice(0, 10).toUpperCase();
-  }
-
-  return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
 }

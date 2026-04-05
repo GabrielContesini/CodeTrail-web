@@ -1,7 +1,6 @@
-// @ts-nocheck
 "use client";
 
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
   Award,
@@ -15,7 +14,7 @@ import {
   VolumeX,
   Zap,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Pill,
@@ -75,9 +74,113 @@ export function SkillThreePage() {
    const [selectedNode, setSelectedNode] = useState<SkillThreeNodeState | null>(null);
    const [selectedMission, setSelectedMission] = useState<SkillThreeMissionState | null>(null);
    const [zoom, setZoom] = useState(1);
+   const [leaderboardByScope, setLeaderboardByScope] = useState(skillThree.leaderboardByScope);
+   const [leaderboardSource, setLeaderboardSource] = useState("fallback");
+   const [progressToast, setProgressToast] = useState<null | {
+     xpDelta: number;
+     levelUpTo: number | null;
+     unlockedDelta: number;
+   }>(null);
+   const previousProgressRef = useRef<null | {
+     xp: number;
+     level: number;
+     unlocked: number;
+   }>(null);
+
+  useEffect(() => {
+    setLeaderboardByScope(skillThree.leaderboardByScope);
+    setLeaderboardSource("fallback");
+  }, [skillThree]);
+
+  useEffect(() => {
+    if (!skillThree.activeTrack || !data?.profile?.id) {
+      return;
+    }
+
+    let active = true;
+
+    async function loadLeaderboard() {
+      try {
+        const response = await fetch("/api/skillthree/leaderboard", {
+          cache: "no-store",
+        });
+        const payload = await response.json().catch(() => null);
+
+        if (
+          !active ||
+          !response.ok ||
+          !payload ||
+          typeof payload !== "object" ||
+          !("leaderboardByScope" in payload)
+        ) {
+          return;
+        }
+
+        setLeaderboardByScope(payload.leaderboardByScope);
+        setLeaderboardSource(
+          "source" in payload && payload.source === "live" ? "live" : "fallback",
+        );
+      } catch {
+        // Mantem o fallback local sem quebrar a tela.
+      }
+    }
+
+    void loadLeaderboard();
+
+    return () => {
+      active = false;
+    };
+  }, [data?.profile?.id, skillThree.activeTrack?.id]);
+
+  useEffect(() => {
+    const current = {
+      xp: skillThree.totalXp,
+      level: skillThree.level.level,
+      unlocked: skillThree.unlockedAchievements.length,
+    };
+
+    const previous = previousProgressRef.current;
+    previousProgressRef.current = current;
+
+    if (!previous) {
+      return;
+    }
+
+    const xpDelta = current.xp - previous.xp;
+    const unlockedDelta = current.unlocked - previous.unlocked;
+    const levelUpTo = current.level > previous.level ? current.level : null;
+
+    if (xpDelta <= 0 && unlockedDelta <= 0 && !levelUpTo) {
+      return;
+    }
+
+    setProgressToast({
+      xpDelta: Math.max(xpDelta, 0),
+      levelUpTo,
+      unlockedDelta: Math.max(unlockedDelta, 0),
+    });
+  }, [
+    skillThree.level.level,
+    skillThree.totalXp,
+    skillThree.unlockedAchievements.length,
+  ]);
+
+  useEffect(() => {
+    if (!progressToast) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setProgressToast(null);
+    }, 3600);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [progressToast]);
 
   const leaderboard =
-    skillThree.leaderboardByScope[
+    leaderboardByScope[
       leaderboardScope === "track" && !skillThree.activeTrack ? "global" : leaderboardScope
     ];
 
@@ -143,6 +246,24 @@ export function SkillThreePage() {
 
   return (
     <>
+      <AnimatePresence>
+        {progressToast ? (
+          <motion.div
+            initial={{ opacity: 0, y: 14, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.98 }}
+            transition={{ duration: reducedMotion ? 0 : 0.18 }}
+            className="fixed right-4 top-24 z-[75] w-[min(360px,calc(100vw-2rem))]"
+          >
+            <ProgressGainToast
+              xpDelta={progressToast.xpDelta}
+              levelUpTo={progressToast.levelUpTo}
+              unlockedDelta={progressToast.unlockedDelta}
+            />
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
       <motion.div
         initial="hidden"
         animate="visible"
@@ -157,7 +278,7 @@ export function SkillThreePage() {
                <div className="h-px w-12 bg-primary/30" />
              </div>
              <h1 className="text-5xl sm:text-6xl font-black tracking-tighter text-white leading-none">
-               ARQUITETURA_HABILIDADES
+               ARQUITETURA DE HABILIDADES
              </h1>
            </div>
            <div className="flex gap-3 flex-shrink-0">
@@ -194,7 +315,7 @@ export function SkillThreePage() {
                  </div>
                  <div className="flex gap-2">
                    <span className="px-3 py-1.5 bg-primary/10 text-primary text-[9px] font-black rounded-full border border-primary/20 tracking-wider">
-                     CAMINHO_ATIVO: {skillThree.activeTrack.commandLabel}
+                     CAMINHO ATIVO: {skillThree.activeTrack.commandLabel}
                    </span>
                  </div>
                </div>
@@ -204,11 +325,11 @@ export function SkillThreePage() {
                {/* FOOTER STATS */}
                <div className="p-6 bg-[#1a1a1a]/20 border-t border-white/[0.05] grid grid-cols-3 gap-4">
                  <div className="text-center border-r border-white/[0.05]">
-                   <p className="text-[9px] text-[#adaaaa] uppercase font-black tracking-wider mb-2">Nós Desbloqueados</p>
-                   <p className="text-xl font-black text-white">{skillThree.formationProgress.masteredNodes} / {skillThree.formationProgress.totalNodes}</p>
+                   <p className="text-[9px] text-[#adaaaa] uppercase font-black tracking-wider mb-2">Nós ativos</p>
+                   <p className="text-xl font-black text-white">{skillThree.skillTree.filter((node) => node.status !== "locked").length} / {skillThree.formationProgress.totalNodes}</p>
                  </div>
                  <div className="text-center border-r border-white/[0.05]">
-                   <p className="text-[9px] text-[#adaaaa] uppercase font-black tracking-wider mb-2">Pontos de Maestria</p>
+                   <p className="text-[9px] text-[#adaaaa] uppercase font-black tracking-wider mb-2">XP total</p>
                    <p className="text-xl font-black text-primary">{formatXp(skillThree.totalXp)}</p>
                  </div>
                  <div className="text-center">
@@ -230,10 +351,14 @@ export function SkillThreePage() {
                <div className="flex items-center justify-between">
                  <div className="flex items-center gap-2">
                    <Sparkles size={18} className="text-primary" />
-                   <h3 className="text-sm font-black tracking-wider uppercase">Katas Diárias</h3>
+                   <h3 className="text-sm font-black tracking-wider uppercase">Missões prioritárias</h3>
                  </div>
-                 <button type="button" className="text-[10px] text-primary hover:text-primary/80 font-black tracking-wide" onClick={() => setAchievementsOpen(true)}>
-                   VER_TUDO
+                 <button
+                   type="button"
+                   className="text-[10px] text-primary hover:text-primary/80 font-black tracking-wide"
+                   onClick={() => setSelectedMission(skillThree.dailyMissions[0] ?? null)}
+                 >
+                   VER MISSÃO
                  </button>
                </div>
                  <div className="space-y-3">
@@ -245,9 +370,9 @@ export function SkillThreePage() {
                        <div className="flex-1 min-w-0">
                          <div className="flex justify-between items-start gap-2">
                            <h4 className="text-xs font-black text-white tracking-tight truncate">{mission.title}</h4>
-                           <span className={`text-[8px] font-black ${mission.completed ? 'text-primary bg-primary/10 border border-primary/30' : 'text-[#ff6b6b] bg-[#ff6b6b]/10 border border-[#ff6b6b]/30'} px-1.5 py-0.5 rounded-sm flex-shrink-0 whitespace-nowrap`}>
-                             {mission.completed ? 'CONCLUÍDA' : 'DIFÍCIL'}
-                           </span>
+                          <span className={`text-[8px] font-black ${mission.completed ? 'text-primary bg-primary/10 border border-primary/30' : 'text-[#ff6b6b] bg-[#ff6b6b]/10 border border-[#ff6b6b]/30'} px-1.5 py-0.5 rounded-sm flex-shrink-0 whitespace-nowrap`}>
+                            {mission.completed ? 'CONCLUÍDA' : getMissionWindowLabel(mission.window)}
+                          </span>
                          </div>
                          <p className="text-[10px] text-[#adaaaa] mt-0.5 line-clamp-1">{mission.description}</p>
                          <div className="flex items-center gap-3 mt-1.5">
@@ -268,14 +393,22 @@ export function SkillThreePage() {
              <div className="bg-[#131313] border border-white/[0.05] rounded-2xl overflow-hidden shadow-2xl">
                <div className="p-6 border-b border-white/[0.05] bg-[#1a1a1a]/40">
                  <h3 className="text-sm font-black tracking-wider uppercase mb-1">Operadores Top</h3>
-                 <p className="text-[10px] text-[#adaaaa] font-medium">Ranking Global do Sistema // V_2.0</p>
+                 <p className="text-[10px] text-[#adaaaa] font-medium">
+                   {leaderboardSource === "live"
+                     ? "Ranking real do sistema // sincronizado"
+                     : "Ranking do seu perfil // aguardando sincronização global"}
+                 </p>
                </div>
                <div className="p-3">
                  <div className="space-y-2">
                    {leaderboard.topThree.map((entry, index) => (
                      <div key={entry.id} className={`flex items-center gap-3 p-3 rounded-lg transition-all ${entry.isCurrentUser ? 'bg-primary/5 border border-primary/10' : 'hover:bg-white/[0.02]'}`}>
                        <span className={`text-xs font-black ${entry.isCurrentUser ? 'text-primary' : 'text-primary/40'} w-6 text-center`}>{String(index + 1).padStart(2, '0')}</span>
-                       <div className={`w-8 h-8 rounded-full border flex-shrink-0 ${entry.isCurrentUser ? 'border-primary shadow-[0_0_10px_rgba(129,236,255,0.3)]' : 'border-white/10'} bg-primary/10`} />
+                       <LeaderboardAvatar
+                         entry={entry}
+                         size="sm"
+                         highlight={entry.isCurrentUser}
+                       />
                        <div className="flex-1 min-w-0">
                          <p className="text-xs font-black text-white truncate">{entry.name}</p>
                          <p className="text-[9px] text-[#adaaaa] font-medium">{entry.isCurrentUser ? 'VOCÊ' : `Nv. ${entry.level}`}</p>
@@ -347,45 +480,60 @@ function SkillThreeCanvas({
   zoom: number;
   onSelectNode: (node: SkillThreeNodeState) => void;
 }) {
-  // Calcular posições circulares para os nodes
-  const calculateCircularPositions = useMemo(() => {
-    const coreNode = nodes.find(n => n.size === "core");
-    const nonCoreNodes = nodes.filter(n => n.size !== "core");
-    
-    const centerX = 50;
-    const centerY = 50;
-    const radius = 35; // Raio do círculo em percentuais
-    
+  const nodeLayout = useMemo(() => {
+    const coreNode = nodes.find((node) => node.size === "core");
+    const nonCoreNodes = nodes.filter((node) => node.size !== "core");
     const positions = new Map<string, { x: number; y: number }>();
-    
-    // Core node no centro
+
     if (coreNode) {
-      positions.set(coreNode.id, { x: centerX, y: centerY });
+      positions.set(coreNode.id, { x: 50, y: 50 });
     }
-    
-    // Nodes ao redor em círculo
-    nonCoreNodes.forEach((node, index) => {
-      const angle = (index / nonCoreNodes.length) * Math.PI * 2 - Math.PI / 2;
-      const x = centerX + radius * Math.cos(angle);
-      const y = centerY + radius * Math.sin(angle);
-      positions.set(node.id, { x, y });
+
+    const rings = buildNodeRings(nonCoreNodes);
+      const ringCount = Math.max(rings.length, 1);
+      const minRadius = ringCount === 1 ? (nonCoreNodes.length <= 4 ? 27 : 31) : ringCount === 2 ? 24 : 20;
+      const maxRadius = ringCount === 1 ? 33 : 42;
+
+    rings.forEach((ring, ringIndex) => {
+      const radius =
+        ringCount === 1
+          ? 33
+          : minRadius + ((maxRadius - minRadius) / Math.max(ringCount - 1, 1)) * ringIndex;
+      ring.forEach((node, nodeIndex) => {
+        const angle = (nodeIndex / ring.length) * Math.PI * 2 - Math.PI / 2;
+        positions.set(node.id, {
+          x: 50 + radius * Math.cos(angle),
+          y: 50 + radius * Math.sin(angle),
+        });
+      });
     });
-    
-    return positions;
+
+    const canvasHeight = 600 + Math.max(0, ringCount - 1) * 90;
+    const canvasWidth = 860 + Math.max(0, ringCount - 1) * 180;
+
+    return {
+      positions,
+      canvasHeight,
+      canvasWidth,
+    };
   }, [nodes]);
 
   return (
     <div className="relative overflow-hidden flex-1 flex flex-col">
       <div className="relative flex-1 overflow-x-auto overflow-y-hidden px-2 py-5">
         <div
-          className="mx-auto h-[600px] min-w-[860px] origin-top transition-transform duration-200 relative"
-          style={{ transform: `scale(${zoom})` }}
+          className="relative mx-auto origin-top transition-transform duration-200"
+          style={{
+            height: `${nodeLayout.canvasHeight}px`,
+            minWidth: `${nodeLayout.canvasWidth}px`,
+            transform: `scale(${zoom})`,
+          }}
         >
           {/* Grid background */}
           <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#81ecff 0.5px, transparent 0.5px)', backgroundSize: '24px 24px' }} />
 
           {nodes.map((node) => {
-            const pos = calculateCircularPositions.get(node.id);
+            const pos = nodeLayout.positions.get(node.id);
             if (!pos) return null;
             
             return (
@@ -410,6 +558,40 @@ function SkillThreeCanvas({
   );
 }
 
+function buildNodeRings(nodes: SkillThreeNodeState[]) {
+  if (nodes.length <= 0) {
+    return [];
+  }
+
+  const capacities = [6, 10, 14];
+  const rings: number[] = [];
+  let remaining = nodes.length;
+
+  for (const capacity of capacities) {
+    if (remaining <= 0) {
+      break;
+    }
+
+    const size = Math.min(capacity, remaining);
+    rings.push(size);
+    remaining -= size;
+  }
+
+  while (remaining > 0) {
+    const size = Math.min(16, remaining);
+    rings.push(size);
+    remaining -= size;
+  }
+
+  let cursor = 0;
+  return rings.map((ringSize) => {
+    const nextCursor = cursor + ringSize;
+    const slice = nodes.slice(cursor, nextCursor);
+    cursor = nextCursor;
+    return slice;
+  });
+}
+
 function CanvasNode({ node }: { node: SkillThreeNodeState }) {
   const isCore = node.size === "core";
   
@@ -431,7 +613,7 @@ function CanvasNode({ node }: { node: SkillThreeNodeState }) {
     glow = "opacity-35 grayscale";
   }
 
-  const sizeClass = isCore ? "h-[120px] w-[120px] rounded-full" : "w-[175px] rounded-lg px-3 py-3";
+  const sizeClass = isCore ? "h-[120px] w-[120px] rounded-full" : "w-[190px] rounded-lg px-3 py-3";
 
   return (
     <motion.div
@@ -449,11 +631,11 @@ function CanvasNode({ node }: { node: SkillThreeNodeState }) {
                 {renderIcon(node.icon, 15)}
               </div>
               <span className="text-[7px] font-black uppercase text-primary bg-primary/10 px-1 py-0.5 rounded whitespace-nowrap">
-                {node.status === "mastered" ? "DOMINADO" : node.status === "in_progress" ? "EM PROG" : "BLOQ"}
+                {getNodeStatusChipLabel(node.status)}
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className="text-xs font-bold tracking-tight text-white line-clamp-2">{node.shortLabel}</h4>
+              <h4 className="text-xs font-bold tracking-tight text-white line-clamp-2">{node.label}</h4>
             </div>
             <div className="mt-auto">
               <ProgressBar value={node.progressPercent} />
@@ -465,6 +647,9 @@ function CanvasNode({ node }: { node: SkillThreeNodeState }) {
             <div className="flex flex-col items-center gap-1">
               <div className="text-3xl text-primary">{renderIcon(node.icon, 32)}</div>
               <span className="text-[7px] font-black uppercase text-white tracking-wider">Núcleo</span>
+              <span className="max-w-[84px] text-center text-[9px] font-bold text-text-secondary line-clamp-2">
+                {node.label}
+              </span>
             </div>
           </div>
         )}
@@ -500,6 +685,8 @@ function SkillThreeModals({
   onCloseMission: () => void;
   onChangeScope: (scope: SkillThreeLeaderboardScope) => void;
 }) {
+  const router = useRouter();
+
   return (
     <>
        <WorkspaceModal
@@ -544,16 +731,17 @@ function SkillThreeModals({
          </div>
        </WorkspaceModal>
 
-        <WorkspaceModal
-          open={Boolean(selectedNode)}
-          onClose={onCloseNode}
+       <WorkspaceModal
+         open={Boolean(selectedNode)}
+         onClose={onCloseNode}
           title={selectedNode?.label ?? "Nó"}
           subtitle={selectedNode?.description}
           size="xl"
           eyebrow={selectedNode?.domain ?? "Árvore de Habilidades"}
+          fullBleed
         >
           {selectedNode ? (
-            <div className="bg-[#0e0e0e]/50 -m-8 p-0 flex flex-col lg:flex-row min-h-[500px] border-t border-white/[0.05]">
+            <div className="bg-[#0e0e0e]/50 flex min-h-[500px] flex-col border-t border-white/[0.05] lg:flex-row">
                {/* Left Section: Hero (35%) */}
                <div className="w-full lg:w-[40%] bg-gradient-to-b from-[#1a1a1a] to-[#0e0e0e] border-b lg:border-b-0 lg:border-r border-white/[0.05] p-8 flex flex-col justify-between relative overflow-hidden">
                   {/* Background image with architecture/server theme */}
@@ -620,7 +808,7 @@ function SkillThreeModals({
                     <div className="bg-primary/20 border border-primary/30 px-4 py-3 rounded-lg flex items-center gap-2">
                       <span className="text-primary font-black text-sm">✓</span>
                       <span className="text-primary font-black tracking-widest text-xs uppercase">
-                        Status do Hábil: {selectedNode.status === "locked" ? "BLOQUEADO" : selectedNode.status === "available" ? "DISPONÍVEL" : selectedNode.status === "in_progress" ? "EM PROGRESSO" : selectedNode.status === "unlocked" ? "DESBLOQUEADO" : "DOMINADO"}
+                        Status da habilidade: {selectedNode.status === "locked" ? "BLOQUEADO" : selectedNode.status === "available" ? "DISPONÍVEL" : selectedNode.status === "in_progress" ? "EM PROGRESSO" : selectedNode.status === "unlocked" ? "DESBLOQUEADO" : "DOMINADO"}
                       </span>
                     </div>
                     
@@ -647,34 +835,29 @@ function SkillThreeModals({
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       <div className="h-[1px] w-8 bg-primary"></div>
-                      <h3 className="text-xs font-black text-primary uppercase tracking-widest">Visão Técnica Geral</h3>
+                      <h3 className="text-xs font-black text-primary uppercase tracking-widest">Visão geral</h3>
                     </div>
                     <p className="text-[#adaaaa] leading-relaxed text-sm">
                       {selectedNode.description}
                     </p>
                   </div>
 
-                  {/* Capabilities Section */}
+                  {/* Capability Section */}
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       <div className="h-[1px] w-8 bg-primary"></div>
-                      <h3 className="text-xs font-black text-primary uppercase tracking-widest">Capacidades Desbloqueadas</h3>
+                      <h3 className="text-xs font-black text-primary uppercase tracking-widest">Leituras da habilidade</h3>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {[
-                        { icon: "hub", title: "Arquitetura Distribuída", desc: "Distribuir operações com 99.9% de eficiência." },
-                        { icon: "security", title: "Operações Seguras", desc: "Implementar filtragem em todos os nós de entrada." },
-                        { icon: "database", title: "Escalabilidade Horizontal", desc: "Dimensionar através de 10+ regiões em paralelo." },
-                        { icon: "speed", title: "Otimização de Latência", desc: "Afinar tempos de resposta sub-milissegundo." }
-                      ].map((cap, idx) => (
-                        <div key={idx} className="bg-[#131313] border border-white/[0.05] rounded-lg p-4 hover:border-primary/30 transition-all group">
+                      {buildNodeInsightCards(selectedNode, skillThree).map((card) => (
+                        <div key={card.title} className="bg-[#131313] border border-white/[0.05] rounded-lg p-4 hover:border-primary/30 transition-all group">
                           <div className="flex items-start gap-3">
                             <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary flex-shrink-0 text-sm">
-                              {renderIcon(cap.icon, 16)}
+                              {renderIcon(card.icon, 16)}
                             </div>
                             <div>
-                              <p className="text-xs font-black text-white">{cap.title}</p>
-                              <p className="text-[11px] text-[#adaaaa] mt-1">{cap.desc}</p>
+                              <p className="text-xs font-black text-white">{card.title}</p>
+                              <p className="text-[11px] text-[#adaaaa] mt-1">{card.description}</p>
                             </div>
                           </div>
                         </div>
@@ -682,44 +865,30 @@ function SkillThreeModals({
                     </div>
                   </div>
 
-                  {/* Mastery Metrics */}
-                  {selectedNode.status === "mastered" && (
-                    <div className="bg-[#1a1a1a] border border-white/[0.05] rounded-xl p-6 space-y-4 relative overflow-hidden">
-                      <div className="absolute top-0 right-0 p-4 opacity-5">
-                        {renderIcon(selectedNode.icon, 48)}
-                      </div>
-                      <h3 className="text-xs font-black text-white uppercase tracking-widest">Métricas de Maestria</h3>
-                      <div className="space-y-4">
-                        <div>
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="text-xs text-[#adaaaa] uppercase font-black">Retenção de Conhecimento</span>
-                            <span className="text-xs font-black text-primary">100%</span>
-                          </div>
-                          <div className="h-1 bg-[#262626] rounded-full overflow-hidden">
-                            <div className="h-full w-full bg-primary shadow-[0_0_8px_rgba(129,236,255,0.8)]" />
-                          </div>
-                        </div>
-                        <div>
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="text-xs text-[#adaaaa] uppercase font-black">Aplicação Prática</span>
-                            <span className="text-xs font-black text-primary">88%</span>
-                          </div>
-                          <div className="h-1 bg-[#262626] rounded-full overflow-hidden">
-                            <div className="h-full w-[88%] bg-primary shadow-[0_0_8px_rgba(129,236,255,0.8)]" />
-                          </div>
-                        </div>
-                        <div>
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="text-xs text-[#adaaaa] uppercase font-black">Sucesso em Implementação</span>
-                            <span className="text-xs font-black text-primary">95%</span>
-                          </div>
-                          <div className="h-1 bg-[#262626] rounded-full overflow-hidden">
-                            <div className="h-full w-[95%] bg-primary shadow-[0_0_8px_rgba(129,236,255,0.8)]" />
-                          </div>
-                        </div>
-                      </div>
+                  <div className="bg-[#1a1a1a] border border-white/[0.05] rounded-xl p-6 space-y-4 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-5">
+                      {renderIcon(selectedNode.icon, 48)}
                     </div>
-                  )}
+                    <h3 className="text-xs font-black text-white uppercase tracking-widest">
+                      {selectedNode.status === "mastered" ? "Métricas consolidadas" : "Indicadores do nó"}
+                    </h3>
+                    <div className="space-y-4">
+                      {buildNodeMetricBars(selectedNode, skillThree).map((metric) => (
+                        <div key={metric.label}>
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-xs text-[#adaaaa] uppercase font-black">{metric.label}</span>
+                            <span className="text-xs font-black text-primary">{metric.value}%</span>
+                          </div>
+                          <div className="h-1 bg-[#262626] rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-primary shadow-[0_0_8px_rgba(129,236,255,0.8)]"
+                              style={{ width: `${metric.value}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
 
                   {/* Linked Achievements */}
                   {selectedNode.linkedAchievementIds.length > 0 && (
@@ -752,16 +921,20 @@ function SkillThreeModals({
                 <div className="pt-8 space-y-4 border-t border-white/[0.05]">
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex items-center justify-between px-4 py-3 bg-white/[0.02] border border-white/[0.05] rounded-lg">
-                      <span className="text-[9px] text-[#adaaaa] uppercase font-black">Último Update</span>
-                      <span className="text-[10px] font-mono text-white">2024.04.02</span>
+                      <span className="text-[9px] text-[#adaaaa] uppercase font-black">Sincronização</span>
+                      <span className="text-[10px] font-mono text-white">TEMPO REAL</span>
                     </div>
                     <div className="flex items-center justify-between px-4 py-3 bg-white/[0.02] border border-white/[0.05] rounded-lg">
-                      <span className="text-[9px] text-[#adaaaa] uppercase font-black">Profundidade</span>
-                      <span className="text-[10px] font-mono text-white">LAYER_{selectedNode.size === "core" ? "00" : "07"}</span>
+                      <span className="text-[9px] text-[#adaaaa] uppercase font-black">Camada</span>
+                      <span className="text-[10px] font-mono text-white">{getNodeSizeLabel(selectedNode.size)}</span>
                     </div>
                   </div>
-                  <button className="w-full bg-gradient-to-r from-primary to-[#00e3fd] text-[#003840] py-4 rounded-lg font-black text-sm tracking-widest uppercase transition-all hover:brightness-110 active:scale-95 shadow-[0_0_20px_rgba(129,236,255,0.3)] flex items-center justify-center gap-2">
-                    Revisar Conteúdo
+                  <button
+                    type="button"
+                    onClick={() => router.push("/workspace/tracks")}
+                    className="w-full bg-gradient-to-r from-primary to-[#00e3fd] text-[#003840] py-4 rounded-lg font-black text-sm tracking-widest uppercase transition-all hover:brightness-110 active:scale-95 shadow-[0_0_20px_rgba(129,236,255,0.3)] flex items-center justify-center gap-2"
+                  >
+                    {selectedNode.status === "mastered" ? "Revisar trilha" : "Abrir trilha"}
                     <span>→</span>
                   </button>
                 </div>
@@ -778,167 +951,21 @@ function SkillThreeModals({
           subtitle={selectedMission?.description}
           size="xl"
           eyebrow={selectedMission?.window === "daily" ? "Série Diária de Katas" : "Missão Semanal"}
+          fullBleed
         >
           {selectedMission ? (
-            <div className="bg-[#0e0e0e]/50 -m-8 p-0 flex flex-col lg:flex-row min-h-[500px] border-t border-white/[0.05]">
-              {/* Left Section: Visual & Header (40%) */}
-              <div className="w-full lg:w-[40%] relative min-h-[300px] flex flex-col justify-end p-8 bg-[#131313] border-b lg:border-b-0 lg:border-r border-white/[0.05] overflow-hidden">
-                {/* Background visual */}
-                <div className="absolute inset-0 opacity-30">
-                  {/* SVG pattern for ninja/katana aesthetic */}
-                  <svg className="w-full h-full" viewBox="0 0 400 600" preserveAspectRatio="xMidYMid slice">
-                    <defs>
-                      <filter id="glow">
-                        <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-                        <feMerge>
-                          <feMergeNode in="coloredBlur"/>
-                          <feMergeNode in="SourceGraphic"/>
-                        </feMerge>
-                      </filter>
-                    </defs>
-                    {/* Background gradient */}
-                    <rect width="400" height="600" fill="#1a1a1a"/>
-                    {/* Circuit pattern */}
-                    <circle cx="200" cy="300" r="150" fill="none" stroke="#81ecff" strokeWidth="0.5" opacity="0.4"/>
-                    <circle cx="200" cy="300" r="100" fill="none" stroke="#81ecff" strokeWidth="0.5" opacity="0.3"/>
-                    <circle cx="200" cy="300" r="50" fill="none" stroke="#81ecff" strokeWidth="0.5" opacity="0.2"/>
-                    {/* Lines */}
-                    <line x1="200" y1="150" x2="200" y2="450" stroke="#81ecff" strokeWidth="0.5" opacity="0.3"/>
-                    <line x1="50" y1="300" x2="350" y2="300" stroke="#81ecff" strokeWidth="0.5" opacity="0.3"/>
-                    {/* Sword/Katana silhouette */}
-                    <g filter="url(#glow)" opacity="0.6">
-                      <rect x="195" y="50" width="10" height="500" fill="#00e3fd"/>
-                      <polygon points="200,40 195,50 205,50" fill="#00e3fd"/>
-                      <circle cx="200" cy="560" r="15" fill="#81ecff"/>
-                    </g>
-                    {/* Data stream effect */}
-                    <path d="M 100 200 Q 150 250 200 300 T 300 400" stroke="#81ecff" strokeWidth="1" fill="none" opacity="0.2"/>
-                    <path d="M 300 200 Q 250 250 200 300 T 100 400" stroke="#81ecff" strokeWidth="1" fill="none" opacity="0.2"/>
-                  </svg>
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-[#131313] via-[#131313]/40 to-transparent"></div>
-                
-                <div className="relative z-10">
-                  {/* Difficulty Badge */}
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="px-3 py-1 bg-[#ff6b6b]/10 text-[#ff6b6b] text-[10px] font-black uppercase tracking-widest rounded border border-[#ff6b6b]/30">
-                      Dificuldade: {selectedMission.rarity === "common" ? "Fácil" : selectedMission.rarity === "rare" ? "Média" : selectedMission.rarity === "epic" ? "Difícil" : "Extremo"}
-                    </span>
-                  </div>
-                  
-                  {/* Title */}
-                  <h2 className="text-3xl font-black tracking-tighter text-white mb-3 leading-none uppercase">
-                    {selectedMission.title}
-                  </h2>
-                  <p className="text-[#adaaaa] text-sm mb-6">{selectedMission.description}</p>
-                  
-                  {/* Reward & Time */}
-                  <div className="flex gap-6">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] text-primary uppercase tracking-widest font-black mb-1">Recompensa</span>
-                      <span className="text-2xl font-black text-white">+{selectedMission.rewardXp} XP</span>
-                    </div>
-                    <div className="w-px h-12 bg-white/[0.1]"></div>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] text-primary uppercase tracking-widest font-black mb-1">Tempo Est.</span>
-                      <span className="text-2xl font-black text-white">15 MIN</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Section: Details & Action (60%) */}
-              <div className="w-full lg:w-[60%] p-8 md:p-12 flex flex-col">
-                <div className="space-y-8 flex-1">
-                  {/* Mission Objective */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <div className="h-[1px] w-8 bg-primary"></div>
-                      <h3 className="text-xs font-black text-primary uppercase tracking-widest">Objetivo da Missão</h3>
-                    </div>
-                    <p className="text-[#adaaaa] leading-relaxed text-sm">
-                      Complete a tarefa proposta para ganhar experiência e desbloquear novas habilidades. Esta missão foi designada com base no seu nível de maestria e progressão atual no sistema.
-                    </p>
-                  </div>
-
-                  {/* Requirements & Tech Stack */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {/* Requirements */}
-                    <div className="space-y-3">
-                      <h3 className="text-xs font-black text-primary uppercase tracking-widest">Requisitos</h3>
-                      <ul className="space-y-2">
-                        <li className="flex items-center gap-2 text-xs text-white">
-                          <span className="text-primary font-black">✓</span>
-                          Aplicação prática
-                        </li>
-                        <li className="flex items-center gap-2 text-xs text-white">
-                          <span className="text-primary font-black">✓</span>
-                          Implementação completa
-                        </li>
-                        <li className="flex items-center gap-2 text-xs text-white">
-                          <span className="text-primary font-black">✓</span>
-                          Validação de resultado
-                        </li>
-                      </ul>
-                    </div>
-
-                    {/* Tech Stack / Metric */}
-                    <div className="space-y-3">
-                      <h3 className="text-xs font-black text-primary uppercase tracking-widest">Alvo</h3>
-                      <div className="space-y-2">
-                        <div className="px-3 py-2 bg-[#1a1a1a] border border-white/[0.05] rounded text-[10px] text-white font-mono">
-                          {selectedMission.metric}
-                        </div>
-                        <p className="text-xs text-[#adaaaa]">
-                          Meta: <span className="text-white font-black">{selectedMission.target}</span>
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Progress Indicator */}
-                  <div className="bg-[#1a1a1a] border border-white/[0.05] rounded-lg p-4 space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-black text-[#adaaaa] uppercase tracking-widest">Seu Progresso</span>
-                      <span className="text-xs font-black text-primary">{Math.round(selectedMission.progressPercent)}%</span>
-                    </div>
-                    <div className="h-2 bg-[#262626] rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-to-r from-primary to-[#00e3fd] shadow-[0_0_8px_rgba(129,236,255,0.8)]"
-                        style={{ width: `${selectedMission.progressPercent}%` }}
-                      />
-                    </div>
-                    <p className="text-[10px] text-[#adaaaa]">
-                      {selectedMission.completed ? "CONCLUÍDA" : `${Math.round(selectedMission.progress)} de ${selectedMission.target} itens`}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Status & Action */}
-                <div className="pt-8 space-y-4 border-t border-white/[0.05]">
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] text-[#adaaaa] uppercase font-black tracking-widest">Status do Operador</span>
-                      <span className="text-xs text-white font-bold flex items-center gap-2 mt-1">
-                        <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-                        {selectedMission.completed ? "COMPLETADA" : "PRONTO"}
-                      </span>
-                    </div>
-                  </div>
-                  <button className="w-full px-6 py-4 bg-gradient-to-r from-primary to-[#00e3fd] text-[#003840] font-black tracking-widest uppercase rounded-lg shadow-[0px_0px_20px_rgba(129,236,255,0.4)] hover:shadow-[0px_0px_30px_rgba(129,236,255,0.6)] active:scale-95 transition-all text-sm flex items-center justify-center gap-2">
-                    {selectedMission.completed ? "REVISAR RESULTADO" : "INICIAR MISSÃO"}
-                    <span>→</span>
-                  </button>
-                </div>
-              </div>
-            </div>
+            <MissionDetailPanel
+              mission={selectedMission}
+              onClose={onCloseMission}
+              onOpenOrigin={() => router.push(getMissionMeta(selectedMission).href)}
+            />
           ) : null}
          </WorkspaceModal>
       </>
    );
  }
 
- function LeaderboardRow({
+function LeaderboardRow({
   entry,
   position,
 }: {
@@ -952,6 +979,7 @@ function SkillThreeModals({
       <div className="flex h-11 w-11 items-center justify-center rounded-full border border-primary/16 bg-black/20 text-xs font-black text-white">
         {String(position).padStart(2, "0")}
       </div>
+      <LeaderboardAvatar entry={entry} highlight={entry.isCurrentUser} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <p className="truncate text-sm font-bold text-white">{entry.name}</p>
@@ -973,6 +1001,401 @@ function SkillThreeModals({
   );
 }
 
+function LeaderboardAvatar({
+  entry,
+  size = "md",
+  highlight = false,
+}: {
+  entry: SkillThreeExperience["leaderboardByScope"]["global"]["entries"][number];
+  size?: "sm" | "md";
+  highlight?: boolean;
+}) {
+  const sizeClass = size === "sm" ? "h-8 w-8 text-[10px]" : "h-11 w-11 text-xs";
+  const highlightClass = highlight
+    ? "border-primary shadow-[0_0_12px_rgba(129,236,255,0.28)]"
+    : "border-white/10";
+
+  if (entry.avatarUrl) {
+    return (
+      <div className={`overflow-hidden rounded-full border bg-[#101010] ${sizeClass} ${highlightClass}`}>
+        <img src={entry.avatarUrl} alt={entry.name} className="h-full w-full object-cover" />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`flex items-center justify-center rounded-full border bg-primary/10 font-black uppercase tracking-[0.16em] text-primary ${sizeClass} ${highlightClass}`}
+    >
+      {getInitials(entry.name)}
+    </div>
+  );
+}
+
+function buildNodeInsightCards(
+  node: SkillThreeNodeState,
+  skillThree: SkillThreeExperience,
+) {
+  const linkedAchievements = selectedNodeAchievements(node, skillThree);
+  const unlockedLinked = linkedAchievements.filter(
+    (achievement) => achievement.status !== "locked",
+  ).length;
+
+  return [
+    {
+      icon: "sparkles",
+      title: "Estado atual",
+      description: `${getNodeStatusLabel(node.status)} com ${Math.round(node.progressPercent)}% de evolução nesta habilidade.`,
+    },
+    {
+      icon: "gauge",
+      title: "Impacto na trilha",
+      description: `Este nó entrega +${node.rewardXp} XP e faz parte da formação ${node.domain}.`,
+    },
+    {
+      icon: "award",
+      title: "Conquistas ligadas",
+      description: linkedAchievements.length
+        ? `${unlockedLinked} de ${linkedAchievements.length} conquistas relacionadas já foram ativadas.`
+        : "Este nó ainda não possui conquistas relacionadas ativas.",
+    },
+    {
+      icon: node.icon,
+      title: "Camada de progressão",
+      description: `${getNodeSizeLabel(node.size)} dentro da malha principal do SkillThree.`,
+    },
+  ];
+}
+
+function buildNodeMetricBars(
+  node: SkillThreeNodeState,
+  skillThree: SkillThreeExperience,
+) {
+  const maxRewardXp = Math.max(
+    ...skillThree.skillTree.map((item) => item.rewardXp),
+    1,
+  );
+  const linkedAchievements = selectedNodeAchievements(node, skillThree);
+  const unlockedLinked = linkedAchievements.filter(
+    (achievement) => achievement.status !== "locked",
+  ).length;
+
+  return [
+    {
+      label: "Domínio atual",
+      value: Math.max(4, Math.round(node.progressPercent)),
+    },
+    {
+      label: "Peso na trilha",
+      value: Math.round((node.rewardXp / maxRewardXp) * 100),
+    },
+    {
+      label: "Conexões ativas",
+      value: linkedAchievements.length
+        ? Math.round((unlockedLinked / linkedAchievements.length) * 100)
+        : 0,
+    },
+  ];
+}
+
+function selectedNodeAchievements(
+  node: SkillThreeNodeState,
+  skillThree: SkillThreeExperience,
+) {
+  return node.linkedAchievementIds
+    .map((achievementId) =>
+      skillThree.achievements.find((item) => item.id === achievementId),
+    )
+    .filter(Boolean) as SkillThreeAchievementState[];
+}
+
+function getNodeStatusLabel(status: SkillThreeNodeState["status"]) {
+  switch (status) {
+    case "locked":
+      return "Bloqueado";
+    case "available":
+      return "Disponível";
+    case "unlocked":
+      return "Desbloqueado";
+    case "in_progress":
+      return "Em progresso";
+    case "mastered":
+      return "Dominado";
+    default:
+      return "Ativo";
+  }
+}
+
+function getNodeStatusChipLabel(status: SkillThreeNodeState["status"]) {
+  switch (status) {
+    case "locked":
+      return "BLOQ";
+    case "available":
+      return "PRONTO";
+    case "unlocked":
+      return "ATIVO";
+    case "in_progress":
+      return "EM PROG";
+    case "mastered":
+      return "DOMINADO";
+    default:
+      return "ATIVO";
+  }
+}
+
+function getNodeSizeLabel(size: SkillThreeNodeState["size"]) {
+  switch (size) {
+    case "core":
+      return "Núcleo";
+    case "major":
+      return "Camada principal";
+    case "minor":
+      return "Camada complementar";
+    default:
+      return "Camada ativa";
+  }
+}
+
+function getMissionWindowLabel(window: SkillThreeMissionState["window"]) {
+  return window === "daily" ? "HOJE" : "SEMANAL";
+}
+
+function MissionDetailPanel({
+  mission,
+  onClose,
+  onOpenOrigin,
+}: {
+  mission: SkillThreeMissionState;
+  onClose: () => void;
+  onOpenOrigin: () => void;
+}) {
+  const meta = getMissionMeta(mission);
+
+  return (
+    <div className="grid min-h-[520px] gap-0 border-t border-white/[0.05] bg-[#0e0e0e]/50 lg:grid-cols-[320px_minmax(0,1fr)]">
+      <aside className="border-b border-white/[0.05] bg-[linear-gradient(180deg,rgba(19,19,19,0.96),rgba(12,12,12,0.98))] p-6 lg:border-b-0 lg:border-r">
+        <div className="flex h-full flex-col gap-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
+              {renderIcon(meta.icon, 22)}
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary">
+                {meta.originLabel}
+              </p>
+              <p className="mt-1 text-xs uppercase tracking-[0.18em] text-text-secondary">
+                {meta.windowLabel}
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <span className={meta.rarityClass}>{meta.rarityLabel}</span>
+            <h3 className="mt-4 text-3xl font-black tracking-tight text-white">
+              {mission.title}
+            </h3>
+            <p className="mt-3 text-sm leading-relaxed text-text-secondary">
+              {mission.description}
+            </p>
+          </div>
+
+          <div className="grid gap-3">
+            <MissionStatCard label="Recompensa" value={`+${mission.rewardXp} XP`} />
+            <MissionStatCard label="Origem" value={meta.originLabel} />
+            <MissionStatCard label="Meta" value={String(mission.target)} />
+          </div>
+        </div>
+      </aside>
+
+      <section className="flex flex-col p-6 sm:p-8">
+        <div className="flex-1 space-y-6">
+          <div className="rounded-[24px] border border-white/[0.06] bg-white/[0.025] p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">
+                  Alvo operacional
+                </p>
+                <p className="mt-3 break-all rounded-2xl border border-white/[0.06] bg-black/20 px-4 py-3 font-mono text-xs text-white">
+                  {mission.metric}
+                </p>
+              </div>
+              <div className="min-w-[92px] rounded-[20px] border border-primary/16 bg-primary/10 px-4 py-3 text-right">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-primary">
+                  Alvo
+                </p>
+                <p className="mt-2 text-lg font-black text-white">{mission.target}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-[24px] border border-white/[0.06] bg-white/[0.025] p-5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">
+                Progresso da missão
+              </p>
+              <p className="text-sm font-black text-white">
+                {Math.round(mission.progressPercent)}%
+              </p>
+            </div>
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/[0.06]">
+              <div
+                className="h-full rounded-full bg-[linear-gradient(90deg,#81ecff,#00e3fd)] shadow-[0_0_12px_rgba(129,236,255,0.42)]"
+                style={{ width: `${mission.progressPercent}%` }}
+              />
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-text-secondary">
+              {buildMissionProgressLabel(mission)}
+            </p>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-3">
+            {meta.checklist.map((item) => (
+              <div
+                key={item.label}
+                className="rounded-[22px] border border-white/[0.06] bg-white/[0.025] px-4 py-4"
+              >
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-primary">
+                  {item.label}
+                </p>
+                <p className="mt-2 text-sm font-bold text-white">{item.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-8 flex flex-col gap-3 border-t border-white/[0.05] pt-6 sm:flex-row">
+          <button
+            type="button"
+            onClick={onOpenOrigin}
+            className="workspace-button workspace-button--primary min-h-[46px] flex-1 justify-center"
+          >
+            {mission.completed ? meta.reviewActionLabel : meta.actionLabel}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="workspace-button workspace-button--ghost min-h-[46px] justify-center px-5"
+          >
+            Fechar
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function MissionStatCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[22px] border border-white/[0.06] bg-white/[0.03] px-4 py-4">
+      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-primary">
+        {label}
+      </p>
+      <p className="mt-2 text-lg font-black text-white">{value}</p>
+    </div>
+  );
+}
+
+function getMissionMeta(mission: SkillThreeMissionState) {
+  const rarityMap = {
+    common: {
+      label: "Fluxo estável",
+      className:
+        "inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300",
+    },
+    rare: {
+      label: "Missão prioritária",
+      className:
+        "inline-flex rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-sky-300",
+    },
+    epic: {
+      label: "Operação crítica",
+      className:
+        "inline-flex rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-amber-300",
+    },
+    legendary: {
+      label: "Prioridade máxima",
+      className:
+        "inline-flex rounded-full border border-rose-400/20 bg-rose-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-rose-300",
+    },
+  } as const;
+
+  if (mission.instanceId.startsWith("mission-review-")) {
+    return {
+      icon: "activity",
+      href: "/workspace/reviews",
+      originLabel: "Revisão programada",
+      windowLabel: mission.window === "daily" ? "Ciclo diário" : "Ciclo semanal",
+      actionLabel: "Abrir revisões",
+      reviewActionLabel: "Revisar histórico",
+      rarityLabel: rarityMap[mission.rarity].label,
+      rarityClass: rarityMap[mission.rarity].className,
+      checklist: [
+        { label: "Fonte", value: "Memória e retenção" },
+        { label: "Janela", value: mission.window === "daily" ? "Hoje" : "Esta semana" },
+        { label: "Entrega", value: "Fechar a revisão no prazo" },
+      ],
+    };
+  }
+
+  if (mission.instanceId.startsWith("mission-project-")) {
+    return {
+      icon: "trophy",
+      href: "/workspace/projects",
+      originLabel: "Projeto aplicado",
+      windowLabel: mission.window === "daily" ? "Sprint diária" : "Sprint semanal",
+      actionLabel: "Abrir projetos",
+      reviewActionLabel: "Revisar projeto",
+      rarityLabel: rarityMap[mission.rarity].label,
+      rarityClass: rarityMap[mission.rarity].className,
+      checklist: [
+        { label: "Fonte", value: "Entrega prática" },
+        { label: "Janela", value: mission.window === "daily" ? "Hoje" : "Esta semana" },
+        { label: "Entrega", value: "Mover o projeto ao próximo checkpoint" },
+      ],
+    };
+  }
+
+  return {
+    icon: "zap",
+    href: "/workspace/tasks",
+    originLabel: "Tarefa do workspace",
+    windowLabel: mission.window === "daily" ? "Ritmo diário" : "Ritmo semanal",
+    actionLabel: "Abrir tarefas",
+    reviewActionLabel: "Revisar tarefa",
+    rarityLabel: rarityMap[mission.rarity].label,
+    rarityClass: rarityMap[mission.rarity].className,
+    checklist: [
+      { label: "Fonte", value: "Fila operacional" },
+      { label: "Janela", value: mission.window === "daily" ? "Hoje" : "Esta semana" },
+      { label: "Entrega", value: "Concluir a ação prioritária" },
+    ],
+  };
+}
+
+function buildMissionProgressLabel(mission: SkillThreeMissionState) {
+  if (mission.completed) {
+    return "Missão concluída. A origem continua disponível para revisão e continuidade do seu fluxo.";
+  }
+
+  if (typeof mission.target === "number") {
+    if (mission.progress <= 1) {
+      return `${Math.round(mission.progressPercent)}% da meta atingida até agora.`;
+    }
+
+    return `${Math.round(mission.progress)} de ${mission.target} concluído(s) até agora.`;
+  }
+
+  return `Critério atual: ${mission.target}. Continue pela origem da missão para finalizar.`;
+}
+
+function getInitials(value: string) {
+  const parts = value.trim().split(/\s+/).filter(Boolean).slice(0, 2);
+  if (parts.length === 0) {
+    return "CT";
+  }
+  return parts.map((part) => part[0]).join("").toUpperCase();
+}
+
 function AchievementCard({
   achievement,
   compact = false,
@@ -990,7 +1413,7 @@ function AchievementCard({
           <div className="flex flex-wrap items-center gap-2">
             <h4 className="text-sm font-bold text-white">{achievement.name}</h4>
             <Pill tone={achievement.status === "locked" ? "neutral" : "primary"}>
-              {achievement.status.replace("_", " ")}
+              {achievement.status.replace(/_/g, " ")}
             </Pill>
           </div>
           <p className="mt-2 text-[12px] leading-relaxed text-text-secondary">
@@ -1008,6 +1431,45 @@ function AchievementCard({
               Lv. recomendado {achievement.recommendedLevel}
             </p>
           ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProgressGainToast({
+  xpDelta,
+  levelUpTo,
+  unlockedDelta,
+}: {
+  xpDelta: number;
+  levelUpTo: number | null;
+  unlockedDelta: number;
+}) {
+  return (
+    <div className="overflow-hidden rounded-[24px] border border-primary/16 bg-[rgba(9,17,24,0.94)] p-4 shadow-[0_24px_60px_rgba(0,0,0,0.38)] backdrop-blur-xl">
+      <div className="flex items-start gap-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
+          <Zap size={18} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">
+            Progressão atualizada
+          </p>
+          <p className="mt-2 text-lg font-black tracking-tight text-white">
+            {xpDelta > 0 ? `+${formatXp(xpDelta)} XP` : "Novo progresso registrado"}
+          </p>
+          <div className="mt-2 space-y-1 text-xs text-text-secondary">
+            {levelUpTo ? <p>Nível {levelUpTo} liberado.</p> : null}
+            {unlockedDelta > 0 ? (
+              <p>
+                {unlockedDelta} {unlockedDelta === 1 ? "conquista liberada." : "conquistas liberadas."}
+              </p>
+            ) : null}
+            {!levelUpTo && unlockedDelta === 0 && xpDelta > 0 ? (
+              <p>Seu avanço no SkillThree acabou de ser sincronizado.</p>
+            ) : null}
+          </div>
         </div>
       </div>
     </div>

@@ -33,6 +33,8 @@ export function SupportChatPanel({
   conversationList,
   activeConversation,
   messages,
+  currentUserName,
+  currentUserAvatarUrl,
   composer,
   onComposerChange,
   onComposerKeyDown,
@@ -50,6 +52,8 @@ export function SupportChatPanel({
   conversationList: SupportChatConversationSummary[];
   activeConversation: SupportChatConversationSummary | null;
   messages: LocalChatMessage[];
+  currentUserName: string;
+  currentUserAvatarUrl: string | null;
   composer: string;
   onComposerChange: (value: string) => void;
   onComposerKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
@@ -73,7 +77,7 @@ export function SupportChatPanel({
           {/* Chat Panel */}
           <motion.div
             key="chat-panel"
-            className="fixed bottom-8 right-8 z-[90] w-96 h-[500px] flex flex-col overflow-hidden rounded-2xl shadow-2xl md:inset-x-auto md:right-auto md:bottom-auto"
+            className="fixed inset-x-4 bottom-4 z-[90] flex h-[min(500px,calc(100vh-2rem))] max-h-[calc(100vh-2rem)] w-auto flex-col overflow-hidden rounded-2xl shadow-2xl sm:inset-x-auto sm:bottom-8 sm:right-8 sm:h-[500px] sm:w-96"
             style={{
               backdropFilter: "blur(20px)",
               background: "rgba(14, 14, 14, 0.7)",
@@ -233,6 +237,9 @@ export function SupportChatPanel({
                               message={message}
                               isOwn={message.senderRole === viewerRole}
                               viewerRole={viewerRole}
+                              currentUserName={currentUserName}
+                              currentUserAvatarUrl={currentUserAvatarUrl}
+                              activeConversation={activeConversation}
                             />
                           </div>
                         );
@@ -328,45 +335,37 @@ function SupportMessageBubble({
   message,
   isOwn,
   viewerRole,
+  currentUserName,
+  currentUserAvatarUrl,
+  activeConversation,
 }: {
   message: LocalChatMessage;
   isOwn: boolean;
   viewerRole: SupportChatViewerRole;
+  currentUserName: string;
+  currentUserAvatarUrl: string | null;
+  activeConversation: SupportChatConversationSummary | null;
 }) {
   const status = deriveSupportOutgoingMessageStatus(message, viewerRole);
+  const resolvedCurrentUserName =
+    currentUserName.trim() && currentUserName !== "Voce"
+      ? currentUserName
+      : activeConversation?.customerName || message.senderName;
+  const senderName = isOwn ? resolvedCurrentUserName : message.senderName;
+  const senderAvatarUrl = isOwn
+    ? currentUserAvatarUrl ?? activeConversation?.customerAvatarUrl ?? null
+    : message.senderRole === "customer"
+      ? activeConversation?.customerAvatarUrl ?? null
+      : null;
 
   return (
     <div className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
       <div className={`max-w-[80%] flex gap-3 ${isOwn ? "flex-row-reverse" : ""}`}>
-        {/* Avatar */}
-        {isOwn ? (
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border"
-            style={{
-              background: "rgba(32, 32, 31, 0.5)",
-              borderColor: "rgba(72, 72, 71, 0.3)",
-            }}
-          >
-            <span
-              className="text-lg"
-              style={{ color: "#adaaaa" }}
-            >
-              👤
-            </span>
-          </div>
-        ) : (
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: "#00e3fd" }}
-          >
-            <span
-              className="text-lg font-black"
-              style={{ color: "#003840" }}
-            >
-              🤖
-            </span>
-          </div>
-        )}
+        <ChatAvatar
+          avatarUrl={senderAvatarUrl}
+          label={senderName}
+          isOwn={isOwn}
+        />
 
         {/* Message Content */}
         <div className="min-w-0 flex-1">
@@ -402,7 +401,7 @@ function SupportMessageBubble({
           <div className="mt-1 flex items-center gap-2">
             <span className="text-[9px] font-black uppercase tracking-[0.18em]">
               <span style={{ color: "#81ecff" }}>
-                {isOwn ? "OPERATOR" : "SUPPORT"}
+                {senderName}
               </span>
             </span>
             {message.optimistic ? (
@@ -429,6 +428,52 @@ function SupportMessageStatus({
   }
 
   return <Check size={12} className="text-gray-500" />;
+}
+
+function ChatAvatar({
+  avatarUrl,
+  label,
+  isOwn,
+}: {
+  avatarUrl: string | null;
+  label: string;
+  isOwn: boolean;
+}) {
+  const borderColor = isOwn ? "rgba(0, 227, 253, 0.24)" : "rgba(72, 72, 71, 0.3)";
+  const background = isOwn ? "rgba(0, 227, 253, 0.12)" : "rgba(32, 32, 31, 0.5)";
+
+  if (avatarUrl) {
+    return (
+      <div
+        className="h-8 w-8 shrink-0 overflow-hidden rounded-lg border"
+        style={{ borderColor, background }}
+      >
+        <img src={avatarUrl} alt={label} className="h-full w-full object-cover" />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-[10px] font-black uppercase tracking-[0.12em]"
+      style={{
+        borderColor,
+        background,
+        color: isOwn ? "#81ecff" : "#f5f5f5",
+      }}
+    >
+      {getInitials(label)}
+    </div>
+  );
+}
+
+function getInitials(value: string) {
+  const parts = value.trim().split(/\s+/).filter(Boolean).slice(0, 2);
+  if (parts.length === 0) {
+    return "CT";
+  }
+
+  return parts.map((part) => part[0]).join("").toUpperCase();
 }
 
 function formatTimeLabel(value: string) {

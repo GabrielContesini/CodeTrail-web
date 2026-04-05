@@ -1,6 +1,5 @@
+import { PrivacyPreferences } from "@/app/components/privacy/privacy-preferences";
 import { SupportWidget } from "@/app/components/support/support-widget";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
@@ -41,8 +40,7 @@ export default function RootLayout({
       <body className={inter.variable}>
         {children}
         <SupportWidget origin="Web App" prefillAuthenticatedUser />
-        <Analytics />
-        <SpeedInsights />
+        <PrivacyPreferences />
       </body>
     </html>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { PrivacyControls } from "@/app/components/privacy/privacy-controls";
 import {
     fadeUpVariants,
     useMotionPreferences,
@@ -459,6 +460,30 @@ export function SettingsPage() {
               </div>
             </section>
           )}
+
+          <section
+            id="privacy-center"
+            className="col-span-12 scroll-mt-24 rounded-xl border border-white/5 bg-surface-container p-8"
+          >
+            <div className="mb-8 flex items-center gap-4">
+              <span
+                className="material-symbols-outlined text-3xl text-primary"
+                style={{
+                  fontVariationSettings:
+                    "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24",
+                }}
+              >
+                policy
+              </span>
+              <div>
+                <h3 className="text-xl font-bold">Privacidade e dados</h3>
+                <p className="mt-1 text-sm text-on-surface-variant">
+                  Centro LGPD com exportação, histórico de solicitações e documentos legais.
+                </p>
+              </div>
+            </div>
+            <PrivacyControls />
+          </section>
 
           {/* Danger Zone */}
           <section className="col-span-12 flex flex-col justify-between gap-6 rounded-xl border border-error/20 bg-error/5 p-8 md:flex-row md:items-center">

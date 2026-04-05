@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { LoaderCircle, SendHorizonal, X } from "lucide-react";
 import { modalVariants } from "@/app/components/ui/motion-system";
 import type { SupportFieldErrorMap } from "@/utils/support/shared";
+import Link from "next/link";
 import type { FormEvent } from "react";
 
 interface SupportWidgetFeedback {
@@ -189,6 +190,17 @@ export function SupportTicketModal({
                       </>
                     )}
                   </button>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-sm leading-6 text-[#adaaaa]">
+                  Os dados enviados neste chamado seguem a{" "}
+                  <Link
+                    href="/politica-de-privacidade"
+                    className="font-semibold text-[#81ecff] underline decoration-[#81ecff]/40 underline-offset-4 transition-colors hover:text-white"
+                  >
+                    Política de Privacidade
+                  </Link>{" "}
+                  do CodeTrail.
                 </div>
               </form>
             </div>

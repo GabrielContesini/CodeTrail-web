@@ -112,6 +112,10 @@ export function SupportWidget({
   const [chatError, setChatError] = useState<string | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserName, setCurrentUserName] = useState("Voce");
+  const [currentUserAvatarUrl, setCurrentUserAvatarUrl] = useState<string | null>(
+    null,
+  );
   const [conversationList, setConversationList] = useState<
     SupportChatConversationSummary[]
   >([]);
@@ -211,18 +215,29 @@ export function SupportWidget({
         try {
           const { data: profile } = await supabase
             .from("profiles")
-            .select("full_name")
+            .select("full_name, avatar_url")
             .eq("id", user.id)
             .maybeSingle();
 
           if (profile?.full_name) {
             fullName = profile.full_name;
           }
+
+          if (profile?.avatar_url) {
+            setCurrentUserAvatarUrl(profile.avatar_url);
+          }
         } catch {
           // Mantem o fallback da metadata.
         }
 
         setAuthenticated(true);
+        setCurrentUserName(fullName || user.email || "Voce");
+        setCurrentUserAvatarUrl((current) =>
+          current ??
+          (typeof user.user_metadata.avatar_url === "string"
+            ? user.user_metadata.avatar_url
+            : null),
+        );
         setForm((current) => ({
           ...current,
           name: current.name || fullName || "",
@@ -250,6 +265,8 @@ export function SupportWidget({
 
       if (!user) {
         setCurrentUserId(null);
+        setCurrentUserName("Voce");
+        setCurrentUserAvatarUrl(null);
         setAuthenticated(false);
         setChatStorageReady(false);
         setConversationList([]);
@@ -267,12 +284,16 @@ export function SupportWidget({
       try {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("full_name")
+          .select("full_name, avatar_url")
           .eq("id", user.id)
           .maybeSingle();
 
         if (profile?.full_name) {
           fullName = profile.full_name;
+        }
+
+        if (profile?.avatar_url) {
+          setCurrentUserAvatarUrl(profile.avatar_url);
         }
       } catch {
         // Mantem o fallback vindo da metadata.
@@ -280,6 +301,13 @@ export function SupportWidget({
 
       setAuthenticated(true);
       setAuthResolved(true);
+      setCurrentUserName(fullName || user.email || "Voce");
+      setCurrentUserAvatarUrl((current) =>
+        current ??
+        (typeof user.user_metadata.avatar_url === "string"
+          ? user.user_metadata.avatar_url
+          : null),
+      );
       setChatStorageReady((current) => (current === false ? null : current));
       setForm((current) => ({
         ...current,
@@ -750,6 +778,7 @@ export function SupportWidget({
       clientMessageId,
       conversationId,
       senderRole: viewerRole,
+      senderName: currentUserName,
     });
 
     setChatSending(true);
@@ -879,6 +908,8 @@ export function SupportWidget({
           conversationList={conversationList}
           activeConversation={activeConversation}
           messages={messages}
+          currentUserName={currentUserName}
+          currentUserAvatarUrl={currentUserAvatarUrl}
           composer={composer}
           onComposerChange={setComposer}
           onComposerKeyDown={handleComposerKeyDown}
@@ -992,6 +1023,7 @@ function createOptimisticMessage(args: {
   clientMessageId: string;
   conversationId: string;
   senderRole: SupportChatViewerRole;
+  senderName: string;
 }) {
   const timestamp = new Date().toISOString();
 
@@ -1001,7 +1033,7 @@ function createOptimisticMessage(args: {
     senderRole: args.senderRole,
     senderUserId: null,
     senderOperatorId: null,
-    senderName: "Voce",
+    senderName: args.senderName,
     body: args.body,
     contentType: "text",
     clientMessageId: args.clientMessageId,
