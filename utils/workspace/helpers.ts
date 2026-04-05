@@ -73,7 +73,7 @@ export const navigationItems: NavigationItem[] = [
     label: "SkillThree",
     section: "skillthree",
     href: "/workspace/skillthree",
-    icon: "neurology",
+    icon: "cards",
   },
   {
     label: "Trilhas",
