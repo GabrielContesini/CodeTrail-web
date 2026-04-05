@@ -18,7 +18,6 @@ import {
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  MetricCard,
   Pill,
   ProgressBar,
   WorkspaceModal,
@@ -28,6 +27,7 @@ import {
   useStableReducedMotion,
 } from "@/app/components/ui/motion-system";
 import { useWorkspace } from "@/app/workspace/_components/workspace-provider";
+import { buildSkillThreeExperience } from "@/utils/skillthree/build-skillthree";
 import type {
    SkillThreeAchievementState,
    SkillThreeExperience,
@@ -64,8 +64,8 @@ function formatXp(value: number) {
 }
 
 export function SkillThreePage() {
-  const { data, saveSkillThreeState } = useWorkspace();
-  const skillThree = data!.skillThree;
+  const { data } = useWorkspace();
+  const skillThree = useMemo(() => buildSkillThreeExperience(data), [data]);
   const reducedMotion = useStableReducedMotion();
   const router = useRouter();
    const [leaderboardScope, setLeaderboardScope] =
@@ -80,12 +80,6 @@ export function SkillThreePage() {
     skillThree.leaderboardByScope[
       leaderboardScope === "track" && !skillThree.activeTrack ? "global" : leaderboardScope
     ];
-
-  const toggleSound = async () => {
-    await saveSkillThreeState({
-      sound_enabled: !(skillThree.playerState?.sound_enabled ?? true),
-    });
-  };
 
   if (!skillThree.activeTrack) {
     return (

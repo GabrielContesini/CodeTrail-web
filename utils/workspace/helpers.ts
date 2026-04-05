@@ -70,6 +70,12 @@ export const navigationItems: NavigationItem[] = [
     icon: "dashboard",
   },
   {
+    label: "SkillThree",
+    section: "skillthree",
+    href: "/workspace/skillthree",
+    icon: "neurology",
+  },
+  {
     label: "Trilhas",
     section: "tracks",
     href: "/workspace/tracks",
@@ -137,6 +143,10 @@ export const routeMetaBySection: Record<WorkspaceSectionKey, RouteMeta> = {
     subtitle:
       "Resumo executivo do estudo, da execução e das próximas ações.",
   },
+  skillthree: {
+    title: "SkillThree",
+    subtitle: "Progressão competitiva, árvore de habilidades e missões do seu perfil.",
+  },
   tracks: {
     title: "Trilhas",
     subtitle: "Roadmaps, skills e módulos para orientar sua evolução.",
@@ -186,6 +196,7 @@ export const routeMetaBySection: Record<WorkspaceSectionKey, RouteMeta> = {
 export function resolveSection(slug: string[] | undefined): WorkspaceSectionKey {
   const path = (slug ?? []).join("/");
   if (!path || path === "dashboard") return "dashboard";
+  if (path === "skillthree") return "skillthree";
   if (path === "tracks" || path.startsWith("tracks/")) return "tracks";
   if (path === "sessions") return "sessions";
   if (path === "tasks") return "tasks";

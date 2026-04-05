@@ -18,6 +18,7 @@ import { ProjectsPage } from "@/app/workspace/_components/pages/projects-page";
 import { ReviewsPage } from "@/app/workspace/_components/pages/reviews-page";
 import { SessionsPage } from "@/app/workspace/_components/pages/sessions-page";
 import { SettingsPage } from "@/app/workspace/_components/pages/settings-page";
+import { SkillThreePage } from "@/app/workspace/_components/pages/skillthree-page";
 import { TasksPage } from "@/app/workspace/_components/pages/tasks-page";
 import { TracksPage } from "@/app/workspace/_components/pages/tracks-page";
 import { useWorkspace } from "@/app/workspace/_components/workspace-provider";
@@ -102,6 +103,7 @@ export function WorkspaceSection({ section }: { section: WorkspaceSectionKey }) 
 
 function renderSection(section: WorkspaceSectionKey) {
   if (section === "dashboard") return <DashboardPage />;
+  if (section === "skillthree") return <SkillThreePage />;
   if (section === "tracks") return <TracksPage />;
   if (section === "sessions") return <SessionsPage />;
   if (section === "tasks") return <TasksPage />;

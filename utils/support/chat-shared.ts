@@ -1,5 +1,3 @@
-"use client";
-
 export const SUPPORT_CHAT_LIMITS = {
   body: 2000,
 } as const;

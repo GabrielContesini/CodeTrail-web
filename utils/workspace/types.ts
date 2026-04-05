@@ -40,6 +40,7 @@ export type MindMapNodeShape =
 
 export type WorkspaceSectionKey =
   | "dashboard"
+  | "skillthree"
   | "tracks"
   | "sessions"
   | "tasks"
