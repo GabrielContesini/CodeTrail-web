@@ -525,13 +525,17 @@ export function featureAccess(billing: BillingSnapshot | null): WorkspaceFeature
   };
 }
 
-export function sortByIsoDesc<T extends Record<string, unknown>>(
+export function sortByIsoDesc<T extends object>(
   items: T[],
   field: keyof T,
 ) {
   return [...items].sort((left, right) => {
-    const leftValue = String(left[field] ?? "");
-    const rightValue = String(right[field] ?? "");
+    const leftValue = String(
+      (left as Record<string, unknown>)[field as string] ?? "",
+    );
+    const rightValue = String(
+      (right as Record<string, unknown>)[field as string] ?? "",
+    );
     return new Date(rightValue).getTime() - new Date(leftValue).getTime();
   });
 }

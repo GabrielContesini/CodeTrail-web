@@ -172,7 +172,7 @@ export function WorkspaceProvider({
           const nextNotification = payload.new as NotificationRow;
           setData((current) => {
             if (!current) return current;
-            const nextNotifications = sortByIsoDesc(
+            const nextNotifications = sortByIsoDesc<NotificationRow>(
               [
                 ...current.notifications.filter(
                   (item) => item.id !== nextNotification.id,
@@ -180,7 +180,7 @@ export function WorkspaceProvider({
                 nextNotification,
               ],
               "created_at",
-            ) as NotificationRow[];
+            );
             return { ...current, notifications: nextNotifications };
           });
         },
