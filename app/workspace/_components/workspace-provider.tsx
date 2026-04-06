@@ -46,6 +46,7 @@ import {
 import {
   applyFlashcardReview,
   buildDefaultSettings,
+  composeWorkspaceData,
   featureAccess,
   sortByIsoDesc,
 } from "@/utils/workspace/helpers";
@@ -358,11 +359,28 @@ export function WorkspaceProvider({
       created_at: existing?.created_at ?? now,
       updated_at: now,
     };
-    await runMutation(() => saveTaskRow(supabase, row), saveOperation("tarefa"));
+    await runMutation(() => saveTaskRow(supabase, row), saveOperation("tarefa"), false);
+    setData((current) =>
+      current
+        ? recomposeWorkspaceData(current, {
+            tasks: sortWorkspaceTasks([
+              ...current.tasks.filter((item) => item.id !== row.id),
+              row,
+            ]),
+          })
+        : current,
+    );
   }
 
   async function deleteTask(id: string) {
-    await runMutation(() => deleteTaskRow(supabase, id), deleteOperation("tarefa"));
+    await runMutation(() => deleteTaskRow(supabase, id), deleteOperation("tarefa"), false);
+    setData((current) =>
+      current
+        ? recomposeWorkspaceData(current, {
+            tasks: current.tasks.filter((item) => item.id !== id),
+          })
+        : current,
+    );
   }
 
   async function saveReview(payload: Partial<ReviewRow>) {
@@ -1009,6 +1027,46 @@ function shouldAutoOpenOnboarding(pathname: string, data: WorkspaceData) {
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function sortWorkspaceTasks(tasks: TaskRow[]) {
+  return [...tasks].sort((left, right) => {
+    const leftDue = left.due_date ? new Date(left.due_date).getTime() : Number.POSITIVE_INFINITY;
+    const rightDue = right.due_date ? new Date(right.due_date).getTime() : Number.POSITIVE_INFINITY;
+
+    if (leftDue !== rightDue) {
+      return leftDue - rightDue;
+    }
+
+    return new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime();
+  });
+}
+
+function recomposeWorkspaceData(
+  current: WorkspaceData,
+  patch: Partial<Pick<WorkspaceData, "tasks">>,
+) {
+  return composeWorkspaceData({
+    profile: current.profile,
+    goal: current.goal,
+    tracks: current.tracks,
+    skills: current.skills,
+    progress: current.progress,
+    modules: current.modules,
+    trackStates: current.trackStates,
+    trackModuleStates: current.trackModuleStates,
+    sessions: current.sessions,
+    tasks: patch.tasks ?? current.tasks,
+    reviews: current.reviews,
+    projects: current.projects,
+    projectSteps: current.projectSteps,
+    notes: current.notes,
+    flashcards: current.flashcards,
+    mindMaps: current.mindMaps,
+    notifications: current.notifications,
+    settings: current.settings,
+    billing: current.billing,
+  });
 }
 
 function defaultProfile(user: WorkspaceUser): ProfileRow {
