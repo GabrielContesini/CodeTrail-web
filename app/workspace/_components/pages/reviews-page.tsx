@@ -161,6 +161,7 @@ export function ReviewsPage() {
                   return (
                     <div
                       key={review.id}
+                      data-testid="review-row"
                       className={`group relative overflow-hidden rounded-r-xl border-l-4 ${borderColor} bg-surface-container p-6 transition-all hover:bg-surface-container-high`}
                     >
                       <div className="absolute right-0 top-0 p-4 opacity-5 transition-opacity group-hover:opacity-10">
@@ -240,6 +241,7 @@ export function ReviewsPage() {
                             setEditing(review);
                             setOpen(true);
                           }}
+                          aria-label="Editar"
                           className="text-[10px] uppercase font-bold text-on-surface-variant hover:text-white transition-colors flex items-center gap-1 ml-auto"
                         >
                           <Pencil size={12} /> Editar
@@ -249,6 +251,7 @@ export function ReviewsPage() {
                             e.stopPropagation();
                             deleteReview(review.id);
                           }}
+                          aria-label="Excluir revisão"
                           className="text-[10px] uppercase font-bold text-on-surface-variant hover:text-error transition-colors flex items-center gap-1 ml-2"
                         >
                           <Trash2 size={12} />

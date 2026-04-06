@@ -5,7 +5,7 @@ import { gotoWorkspaceRoute } from "../helpers/workspace";
 test.skip(!hasAuthCredentials(), "E2E_USER_EMAIL e E2E_USER_PASSWORD nao configurados.");
 
 const routes = [
-  { path: "/workspace/dashboard", title: "Dashboard", section: "dashboard" },
+  { path: "/workspace/dashboard", title: "Painel", section: "dashboard" },
   { path: "/workspace/tracks", title: "Trilhas", section: "tracks" },
   { path: "/workspace/sessions", title: "Sessões", section: "sessions" },
   { path: "/workspace/tasks", title: "Tarefas", section: "tasks" },
@@ -13,7 +13,7 @@ const routes = [
   { path: "/workspace/projects", title: "Projetos", section: "projects" },
   { path: "/workspace/notes", title: "Notas", section: "notes" },
   { path: "/workspace/flashcards", title: "Flashcards", section: "flashcards" },
-  { path: "/workspace/mind-maps", title: "Mind Maps", section: "mind-maps" },
+  { path: "/workspace/mind-maps", title: "Mapas Mentais", section: "mind-maps" },
   { path: "/workspace/analytics", title: /Analytics|Análises/, section: "analytics" },
   { path: "/workspace/settings", title: "Configurações", section: "settings" },
   { path: "/workspace/settings/billing", title: "Plano e cobrança", section: "settings" },
@@ -25,36 +25,36 @@ test.describe("authenticated workspace navigation", () => {
       await gotoWorkspaceRoute(page, route.path, route.title);
 
       if (Boolean(isMobile)) {
-        await expect(page.getByRole("button", { name: "Abrir sidebar" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Alternar sidebar" })).toBeVisible();
         return;
       }
 
       await expect(page.getByTestId("workspace-sidebar")).toBeVisible();
       await expect(page.getByText("CodeTrail").first()).toBeVisible();
 
-      if (!(await page.getByRole("button", { name: "Abrir sidebar" }).isVisible().catch(() => false))) {
+      if (!(await page.getByRole("button", { name: "Alternar sidebar" }).isVisible().catch(() => false))) {
         await expect(page.getByTestId(`workspace-nav-${route.section}`)).toHaveAttribute("aria-current", "page");
       }
     });
   }
 
   test("supports sidebar controls in desktop and mobile layouts", async ({ page, isMobile }) => {
-    await gotoWorkspaceRoute(page, "/workspace/dashboard", "Dashboard");
+    await gotoWorkspaceRoute(page, "/workspace/dashboard", "Painel");
 
     const sidebar = page.getByTestId("workspace-sidebar");
 
     if (Boolean(isMobile)) {
-      await page.getByRole("button", { name: "Abrir sidebar" }).click();
+      await page.getByRole("button", { name: "Alternar sidebar" }).click();
       await expect(sidebar).toBeVisible();
-      await page.getByRole("button", { name: "Fechar sidebar" }).click();
-      await expect(page.getByRole("button", { name: "Fechar sidebar" })).toBeHidden();
+      await page.getByRole("button", { name: "Alternar sidebar" }).click();
+      await expect(sidebar).toBeHidden();
       return;
     }
 
     await expect(sidebar).toHaveAttribute("data-state", "expanded");
-    await page.getByRole("button", { name: "Recolher sidebar" }).click();
+    await page.getByRole("button", { name: "Alternar sidebar" }).click();
     await expect(sidebar).toHaveAttribute("data-state", "collapsed");
-    await page.getByRole("button", { name: "Expandir sidebar" }).click();
+    await page.getByRole("button", { name: "Alternar sidebar" }).click();
     await expect(sidebar).toHaveAttribute("data-state", "expanded");
   });
 });

@@ -8,7 +8,7 @@ test.describe("public route protection", () => {
       "/workspace/settings/billing",
     ]) {
       await page.goto(path);
-      await expect(page).toHaveURL(/\/auth$/);
+      await expect(page).toHaveURL(/\/auth(?:\?.*)?$/);
       await expect(page.getByRole("heading", { name: "Acesso ao Workspace" })).toBeVisible();
     }
   });

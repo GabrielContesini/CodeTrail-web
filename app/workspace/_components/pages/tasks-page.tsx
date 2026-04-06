@@ -137,6 +137,7 @@ export function TasksPage() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     key={task.id}
+                    data-testid="task-row"
                     className="group flex flex-col sm:flex-row gap-4 sm:gap-6 sm:items-center justify-between bg-surface-container-low hover:bg-surface-container-highest p-5 rounded-2xl border border-outline-variant/5 hover:border-primary/20 transition-all"
                   >
                     {/* Task Info Area */}
@@ -196,6 +197,7 @@ export function TasksPage() {
                       <button
                         onClick={() => { setEditing(task); setOpen(true); }}
                         className="w-10 h-10 flex items-center justify-center bg-transparent hover:bg-surface-container-highest border border-transparent rounded-lg text-on-surface-variant hover:text-white transition-all"
+                        aria-label="Editar"
                         title="Editar Tarefa"
                       >
                         <Pencil size={16} />
@@ -203,6 +205,7 @@ export function TasksPage() {
                       <button
                         onClick={() => void deleteTask(task.id)}
                         className="w-10 h-10 flex items-center justify-center bg-transparent hover:bg-error/10 border border-transparent hover:border-error/20 rounded-lg text-on-surface-variant hover:text-error transition-all"
+                        aria-label="Excluir tarefa"
                         title="Excluir Tarefa"
                       >
                         <Trash2 size={16} />

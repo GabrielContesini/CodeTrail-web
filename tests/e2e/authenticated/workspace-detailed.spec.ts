@@ -12,12 +12,12 @@ test.describe("detailed workspace audit", () => {
   test.describe.configure({ mode: "serial" });
 
   test("audits shell controls, dashboard actions and locked/public sections", async ({ page }) => {
-    await gotoWorkspaceRoute(page, "/workspace/dashboard", "Dashboard");
+    await gotoWorkspaceRoute(page, "/workspace/dashboard", "Painel");
 
-    await page.getByRole("button", { name: "Recolher sidebar" }).click();
-    await expect(page.getByRole("button", { name: "Expandir sidebar" })).toBeVisible();
-    await page.getByRole("button", { name: "Expandir sidebar" }).click();
-    await expect(page.getByRole("button", { name: "Recolher sidebar" })).toBeVisible();
+    await page.getByRole("button", { name: "Alternar sidebar" }).click();
+    await expect(page.getByTestId("workspace-sidebar")).toHaveAttribute("data-state", "collapsed");
+    await page.getByRole("button", { name: "Alternar sidebar" }).click();
+    await expect(page.getByTestId("workspace-sidebar")).toHaveAttribute("data-state", "expanded");
 
     await page.getByRole("button", { name: /^Sincronizar$/ }).click();
     await expect(page.getByText("Sincronizando workspace")).toBeVisible();
@@ -32,21 +32,21 @@ test.describe("detailed workspace audit", () => {
       await expect(page.getByRole("button", { name: /Fazer upgrade/i })).toBeVisible();
     }
 
-    await gotoWorkspaceRoute(page, "/workspace/dashboard", "Dashboard");
+    await gotoWorkspaceRoute(page, "/workspace/dashboard", "Painel");
     await Promise.all([
       page.waitForURL(/\/workspace\/sessions$/),
       page.getByRole("link", { name: /Iniciar foco/i }).click(),
     ]);
     await expect(page.locator("h1, h2").filter({ hasText: "Sessões" }).first()).toBeVisible();
 
-    await gotoWorkspaceRoute(page, "/workspace/dashboard", "Dashboard");
+    await gotoWorkspaceRoute(page, "/workspace/dashboard", "Painel");
     await Promise.all([
       page.waitForURL(/\/workspace\/notes$/),
       page.getByRole("link", { name: /Abrir notas/i }).click(),
     ]);
     await expect(page.locator("h1, h2").filter({ hasText: "Notas" }).first()).toBeVisible();
 
-    await gotoWorkspaceRoute(page, "/workspace/dashboard", "Dashboard");
+    await gotoWorkspaceRoute(page, "/workspace/dashboard", "Painel");
     await Promise.all([
       page.waitForURL(/\/workspace\/settings\/billing$/),
       page.getByRole("link", { name: "Gerenciar plano" }).click(),

@@ -358,11 +358,11 @@ export function WorkspaceProvider({
       created_at: existing?.created_at ?? now,
       updated_at: now,
     };
-    await runMutation(() => saveTaskRow(supabase, row), saveOperation("tarefa"), false);
+    await runMutation(() => saveTaskRow(supabase, row), saveOperation("tarefa"));
   }
 
   async function deleteTask(id: string) {
-    await runMutation(() => deleteTaskRow(supabase, id), deleteOperation("tarefa"), false);
+    await runMutation(() => deleteTaskRow(supabase, id), deleteOperation("tarefa"));
   }
 
   async function saveReview(payload: Partial<ReviewRow>) {
