@@ -99,6 +99,7 @@ export function buildAuthErrorRedirect(options: {
   nextPath?: string | null;
   checkoutReturnTo?: string | null;
   message: string;
+  reason?: string | null;
 }) {
   const params = new URLSearchParams();
 
@@ -112,6 +113,10 @@ export function buildAuthErrorRedirect(options: {
 
   if (options.checkoutReturnTo) {
     params.set("returnTo", options.checkoutReturnTo);
+  }
+
+  if (options.reason) {
+    params.set("auth_reason", options.reason);
   }
 
   params.set("auth_error", options.message);

@@ -129,6 +129,9 @@ describe("GET /auth/callback", () => {
     const redirectUrl = new URL(location!);
     expect(redirectUrl.pathname).toBe("/auth");
     expect(redirectUrl.searchParams.get("plan")).toBe("free");
+    expect(redirectUrl.searchParams.get("auth_reason")).toBe(
+      "existing_account_conflict",
+    );
     expect(redirectUrl.searchParams.get("auth_error")).toBe(
       "Encontramos uma conta existente do CodeTrail com este e-mail. Entre usando o método original dessa conta para recuperar o acesso.",
     );

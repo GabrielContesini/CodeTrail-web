@@ -45,9 +45,10 @@ describe("OAuth helpers", () => {
         target: "workspace",
         nextPath: "/workspace/dashboard",
         message: "Falha ao autenticar.",
+        reason: "existing_account_conflict",
       }),
     ).toBe(
-      "/auth?plan=free&next=%2Fworkspace%2Fdashboard&auth_error=Falha+ao+autenticar.",
+      "/auth?plan=free&next=%2Fworkspace%2Fdashboard&auth_reason=existing_account_conflict&auth_error=Falha+ao+autenticar.",
     );
   });
 

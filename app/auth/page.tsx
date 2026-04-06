@@ -3,6 +3,7 @@
 import { EmbeddedCheckoutDialog } from "@/app/components/embedded-checkout-dialog";
 import { usePlanIntent } from "@/store/plan-intent-store";
 import {
+  buildPostAuthDestination,
   buildGoogleCallbackUrl,
   getAuthErrorMessage,
   normalizeAuthNextPath,
@@ -61,10 +62,14 @@ export default function AuthPage() {
   const { selectedPlan, clearIntent } = usePlanIntent();
   const router = useRouter();
   const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null);
+  const authCleanupRef = useRef(false);
+  const activeSessionCheckRef = useRef(false);
   const [queryPlan, setQueryPlan] = useState<BillingPlanCode | null>(null);
   const [target, setTarget] = useState<"workspace" | "download">("workspace");
   const [nextPath, setNextPath] = useState<string | null>(null);
   const [checkoutReturnTo, setCheckoutReturnTo] = useState<string | null>(null);
+  const [authReason, setAuthReason] = useState<string | null>(null);
+  const [authContextReady, setAuthContextReady] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -98,8 +103,79 @@ export default function AuthPage() {
     setTarget(parseAuthFlowTarget(params.get("target")));
     setNextPath(normalizeAuthNextPath(params.get("next")));
     setCheckoutReturnTo(normalizeCheckoutReturnUrl(params.get("returnTo")));
+    setAuthReason(params.get("auth_reason"));
     setErrorMsg(params.get("auth_error") ?? params.get("billing_error") ?? "");
+    setAuthContextReady(true);
   }, []);
+
+  useEffect(() => {
+    if (
+      !authContextReady ||
+      authCleanupRef.current ||
+      !authReason ||
+      (authReason !== "existing_account_conflict" && authReason !== "session_reset")
+    ) {
+      return;
+    }
+
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      return;
+    }
+
+    authCleanupRef.current = true;
+
+    void supabase.auth.signOut({
+      scope: "local",
+    });
+  }, [authContextReady, authReason]);
+
+  useEffect(() => {
+    if (
+      !authContextReady ||
+      authReason ||
+      activeSessionCheckRef.current ||
+      authCleanupRef.current
+    ) {
+      return;
+    }
+
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      return;
+    }
+
+    activeSessionCheckRef.current = true;
+    let cancelled = false;
+
+    void supabase.auth.getUser().then(({ data, error }) => {
+      if (cancelled || error || !data.user) {
+        return;
+      }
+
+      router.replace(
+        buildAuthenticatedDestination({
+          plan: activePlan,
+          target,
+          nextPath,
+          checkoutReturnTo,
+        }),
+      );
+      router.refresh();
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activePlan,
+    authContextReady,
+    authReason,
+    checkoutReturnTo,
+    nextPath,
+    router,
+    target,
+  ]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -571,6 +647,27 @@ function buildBillingReturnUrl(checkoutReturnTo?: string | null) {
   }
 
   return `${window.location.origin}/workspace/settings/billing`;
+}
+
+function buildAuthenticatedDestination(options: {
+  plan: BillingPlanCode | null;
+  target: "workspace" | "download";
+  nextPath?: string | null;
+  checkoutReturnTo?: string | null;
+}) {
+  let destination = buildPostAuthDestination({
+    plan: options.plan,
+    target: options.target,
+    nextPath: options.nextPath,
+  });
+
+  if (options.plan && options.checkoutReturnTo) {
+    const destinationUrl = new URL(destination, window.location.origin);
+    destinationUrl.searchParams.set("returnTo", options.checkoutReturnTo);
+    destination = `${destinationUrl.pathname}${destinationUrl.search}`;
+  }
+
+  return destination;
 }
 
 async function persistPlanIntent(

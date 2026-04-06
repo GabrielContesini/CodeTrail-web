@@ -126,6 +126,7 @@ export async function GET(request: NextRequest) {
       nextPath,
       checkoutReturnTo,
       message: existingAccountConflict.message,
+      reason: "existing_account_conflict",
     });
 
     logServerEvent({

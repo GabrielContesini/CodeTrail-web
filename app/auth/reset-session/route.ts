@@ -11,6 +11,12 @@ export async function GET(request: NextRequest) {
   const reason = request.nextUrl.searchParams.get("reason");
   const redirectUrl = new URL("/auth", request.url);
   redirectUrl.searchParams.set(
+    "auth_reason",
+    reason === "existing_account_conflict"
+      ? "existing_account_conflict"
+      : "session_reset",
+  );
+  redirectUrl.searchParams.set(
     "auth_error",
     reason === "existing_account_conflict"
       ? EXISTING_ACCOUNT_CONFLICT_MESSAGE
