@@ -4,7 +4,11 @@ import {
     fadeUpVariants,
     useMotionPreferences,
 } from "@/app/components/ui/motion-system";
-import { FeedbackMessage } from "@/app/components/ui/system-primitives";
+import {
+    ActionButton,
+    FeedbackMessage,
+    StatusBadge,
+} from "@/app/components/ui/system-primitives";
 import { ModalForm } from "@/app/workspace/_components/pages/shared";
 import { useWorkspace } from "@/app/workspace/_components/workspace-provider";
 import {
@@ -18,6 +22,7 @@ import {
     labelForProjectStatus,
     projectCompletion,
 } from "@/utils/workspace/helpers";
+import { parseGitHubRepositoryUrl } from "@/utils/workspace/projects";
 import type {
     ProjectBundle,
     ProjectRow,
@@ -30,6 +35,7 @@ import {
     FileStack,
     FolderGit2,
     GitBranch,
+    LoaderCircle,
     Pencil,
     Plus,
     TerminalSquare,
@@ -50,7 +56,9 @@ export function ProjectsPage() {
   const [editing, setEditing] = useState<ProjectRow | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [githubModalOpen, setGithubModalOpen] = useState(false);
+  const [githubFormError, setGithubFormError] = useState<string | null>(null);
   const [githubRepoUrl, setGithubRepoUrl] = useState("");
+  const [githubSaving, setGithubSaving] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     data!.projectBundles[0]?.project.id ?? null,
   );
@@ -62,29 +70,99 @@ export function ProjectsPage() {
     data!.projectBundles[0] ??
     null;
 
-  const hasGithubIntegration = data!.projectBundles.some(
+  const connectedRepositoriesCount = data!.projectBundles.filter(
     (bundle) => bundle.project.repository_url,
+  ).length;
+  const selectedRepository = parseGitHubRepositoryUrl(
+    selectedBundle?.project.repository_url ?? null,
   );
+  const repositoryPreview = parseGitHubRepositoryUrl(githubRepoUrl);
 
-  async function handleGitHubConnect() {
-    if (!githubRepoUrl.trim()) return;
-    
-    const url = githubRepoUrl.trim();
-    const isValidGitHubUrl = url.includes("github.com");
-    
-    if (!isValidGitHubUrl) {
-      setFormError("Por favor, insira uma URL válida do GitHub");
+  function openGitHubModal(projectId?: string) {
+    const bundle =
+      (projectId
+        ? data!.projectBundles.find((item) => item.project.id === projectId)
+        : selectedBundle) ?? null;
+
+    if (bundle) {
+      setSelectedProjectId(bundle.project.id);
+      setGithubRepoUrl(bundle.project.repository_url ?? "");
+    } else {
+      setGithubRepoUrl("");
+    }
+
+    setGithubFormError(null);
+    setGithubModalOpen(true);
+  }
+
+  function closeGitHubModal() {
+    if (githubSaving) {
       return;
     }
 
-    if (selectedBundle) {
-      await saveProject({
-        ...selectedBundle.project,
-        repository_url: url,
-      });
-    }
     setGithubModalOpen(false);
+    setGithubFormError(null);
     setGithubRepoUrl("");
+  }
+
+  function forceCloseGitHubModal() {
+    setGithubModalOpen(false);
+    setGithubFormError(null);
+    setGithubRepoUrl("");
+  }
+
+  async function handleGitHubConnect() {
+    if (!selectedBundle) {
+      setGithubFormError(
+        "Crie ou selecione um projeto antes de conectar um repositório GitHub.",
+      );
+      return;
+    }
+
+    const repository = parseGitHubRepositoryUrl(githubRepoUrl);
+
+    if (!repository) {
+      setGithubFormError(
+        "Use uma URL válida no formato https://github.com/usuario/repositorio.",
+      );
+      return;
+    }
+
+    setGithubSaving(true);
+    setGithubFormError(null);
+
+    try {
+      await saveProject({
+        id: selectedBundle.project.id,
+        repository_url: repository.normalizedUrl,
+      });
+      forceCloseGitHubModal();
+    } catch (error) {
+      setGithubFormError(mapProjectFormError(error));
+    } finally {
+      setGithubSaving(false);
+    }
+  }
+
+  async function handleGitHubDisconnect() {
+    if (!selectedBundle) {
+      return;
+    }
+
+    setGithubSaving(true);
+    setGithubFormError(null);
+
+    try {
+      await saveProject({
+        id: selectedBundle.project.id,
+        repository_url: null,
+      });
+      forceCloseGitHubModal();
+    } catch (error) {
+      setGithubFormError(mapProjectFormError(error));
+    } finally {
+      setGithubSaving(false);
+    }
   }
 
   async function handleSubmit(formData: FormData) {
@@ -285,6 +363,22 @@ export function ProjectsPage() {
 
                         {/* Quick Links */}
                         <div className="mt-2 flex flex-wrap gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openGitHubModal(bundle.project.id);
+                            }}
+                            className={`flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-semibold transition-colors ${
+                              bundle.project.repository_url
+                                ? "border-success/20 bg-success/10 text-success hover:bg-success/20"
+                                : "border-white/10 bg-surface-container-highest text-on-surface hover:bg-white/10"
+                            }`}
+                          >
+                            <FolderGit2 size={14} />
+                            {bundle.project.repository_url
+                              ? "Gerenciar GitHub"
+                              : "Conectar GitHub"}
+                          </button>
                           {bundle.project.repository_url && (
                             <button
                               onClick={(e) => {
@@ -592,28 +686,71 @@ export function ProjectsPage() {
             </div>
 
             {/* GitHub Integration */}
-            <div className="flex flex-col items-center rounded-xl border-2 border-dashed border-outline-variant/30 bg-surface-container p-8 text-center sm:hidden md:flex">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-surface-container-highest">
-                <ExternalLink size={24} className="text-on-surface-variant" />
+            <div className="flex flex-col rounded-xl border border-white/10 bg-surface-container p-6 shadow-xl">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10">
+                <FolderGit2 size={22} className="text-primary" />
               </div>
-              <h4 className="mb-2 font-bold text-on-surface">
-                Integração GitHub
-              </h4>
-              <p className="mb-6 text-xs text-on-surface-variant">
-                {hasGithubIntegration 
-                  ? "Você possui repositórios conectados ao CodeTrail."
-                  : "Conecte sua organização do GitHub para sincronizar repositórios e automatizar seu fluxo de trabalho."}
-              </p>
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusBadge tone={selectedRepository ? "success" : "neutral"}>
+                    <FolderGit2 size={12} />
+                    {selectedRepository ? "Repositório conectado" : "Sem repositório"}
+                  </StatusBadge>
+                  <span className="text-[11px] text-on-surface-variant">
+                    {connectedRepositoriesCount} projeto{connectedRepositoriesCount === 1 ? "" : "s"} com GitHub
+                  </span>
+                </div>
+                <h4 className="font-bold text-on-surface">
+                  Repositório do projeto selecionado
+                </h4>
+                <p className="text-xs leading-relaxed text-on-surface-variant">
+                  {!selectedBundle
+                    ? "Crie ou selecione um projeto para vincular um repositório GitHub."
+                    : selectedRepository
+                      ? `${selectedRepository.slug} conectado a ${selectedBundle.project.title}.`
+                      : `Conecte o repositório principal de ${selectedBundle.project.title} para centralizar entrega, código e documentação.`}
+                </p>
+              </div>
+
+              {selectedBundle ? (
+                <div className="mt-5 rounded-xl border border-white/8 bg-surface-container-highest/60 px-4 py-4">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                    Projeto alvo
+                  </span>
+                  <div className="mt-2 flex items-center justify-between gap-4">
+                    <strong className="truncate text-sm text-on-surface">
+                      {selectedBundle.project.title}
+                    </strong>
+                    {selectedRepository ? (
+                      <button
+                        type="button"
+                        onClick={() => window.open(selectedRepository.normalizedUrl, "_blank")}
+                        className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-primary transition-colors hover:text-white"
+                      >
+                        <ExternalLink size={14} />
+                        Abrir
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+
               <button
-                onClick={() => setGithubModalOpen(true)}
+                onClick={() => openGitHubModal()}
+                disabled={!selectedBundle}
                 className={`flex w-full items-center justify-center gap-2 rounded-lg border py-3 text-xs font-bold transition-all ${
-                  hasGithubIntegration 
+                  selectedRepository
                     ? "border-success/30 bg-success/10 text-success hover:bg-success/20"
                     : "border-white/5 bg-surface-bright text-on-surface hover:border-primary/50"
-                }`}
+                } disabled:cursor-not-allowed disabled:opacity-50`}
+                style={{ marginTop: "1.5rem" }}
               >
                 <FolderGit2 size={16} />
-                <span>{hasGithubIntegration ? "Integração Online" : "Conectar Repositório"}</span>
+                <span>
+                  {selectedRepository
+                    ? "Gerenciar repositório"
+                    : "Conectar repositório"}
+                </span>
               </button>
             </div>
           </div>
@@ -622,46 +759,182 @@ export function ProjectsPage() {
 
       {/* GitHub Connect Modal */}
       <WorkspaceModal
-        title="Conectar Repositório GitHub"
-        subtitle="Cole a URL do repositório que deseja conectar ao seu projeto."
+        title={
+          selectedBundle
+            ? "Conectar repositório GitHub"
+            : "Integração GitHub indisponível"
+        }
+        subtitle={
+          selectedBundle
+            ? "Vincule o repositório principal do projeto selecionado usando uma URL canônica do GitHub."
+            : "Crie ou selecione um projeto antes de usar a integração."
+        }
         open={githubModalOpen}
-        onClose={() => {
-          setGithubModalOpen(false);
-          setGithubRepoUrl("");
-        }}
+        onClose={closeGitHubModal}
       >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-2">
-              URL do Repositório
-            </label>
-            <input
-              type="url"
-              value={githubRepoUrl}
-              onChange={(e) => setGithubRepoUrl(e.target.value)}
-              placeholder="https://github.com/usuario/repositorio"
-              className="w-full px-4 py-3 bg-surface-container-highest border border-outline-variant/20 rounded-lg text-on-surface placeholder:text-on-surface-variant/50 focus:border-primary/50 focus:outline-none"
+        {!selectedBundle ? (
+          <div className="flex flex-col gap-4">
+            <FeedbackMessage
+              tone="warning"
+              title="Nenhum projeto selecionado"
+              message="A integração do GitHub é feita por projeto. Crie um projeto novo ou selecione um projeto existente antes de conectar o repositório."
             />
+            <div className="flex flex-wrap justify-end gap-2.5 border-t border-border/50 pt-5">
+              <ActionButton
+                type="button"
+                variant="secondary"
+                onClick={closeGitHubModal}
+              >
+                Fechar
+              </ActionButton>
+              <ActionButton
+                type="button"
+                onClick={() => {
+                  closeGitHubModal();
+                  setEditing(null);
+                  setFormError(null);
+                  setOpen(true);
+                }}
+              >
+                <Plus size={16} />
+                Novo projeto
+              </ActionButton>
+            </div>
           </div>
-          <div className="flex gap-3 pt-2">
-            <button
-              onClick={() => {
-                setGithubModalOpen(false);
-                setGithubRepoUrl("");
-              }}
-              className="flex-1 px-4 py-3 border border-outline-variant/20 text-on-surface-variant text-xs font-bold rounded-lg hover:bg-surface-container-highest transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleGitHubConnect}
-              disabled={!githubRepoUrl.trim()}
-              className="flex-1 px-4 py-3 bg-primary text-on-primary-fixed text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Conectar
-            </button>
+        ) : (
+          <div className="flex flex-col gap-5">
+            {githubFormError ? (
+              <FeedbackMessage
+                tone="error"
+                title="Não foi possível conectar o repositório"
+                message={githubFormError}
+              />
+            ) : null}
+
+            <div className="rounded-[24px] border border-primary/20 bg-primary/10 px-5 py-5">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <StatusBadge tone={selectedRepository ? "success" : "neutral"}>
+                  <FolderGit2 size={12} />
+                  {selectedRepository ? "Projeto conectado" : "Aguardando conexão"}
+                </StatusBadge>
+                <span className="text-xs text-text-secondary">
+                  {selectedBundle.project.title}
+                </span>
+              </div>
+              <p className="mt-3 text-sm leading-relaxed text-text-secondary">
+                Esta integração vincula um repositório GitHub ao projeto para
+                acesso rápido dentro do workspace. O fluxo não depende de OAuth
+                nem de sincronização automática com a organização.
+              </p>
+            </div>
+
+            <div className="rounded-[24px] border border-border/60 bg-background/35 px-5 py-5">
+              <label className="block text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-2">
+                URL do repositório
+              </label>
+              <input
+                type="url"
+                value={githubRepoUrl}
+                onChange={(e) => {
+                  setGithubRepoUrl(e.target.value);
+                  if (githubFormError) {
+                    setGithubFormError(null);
+                  }
+                }}
+                placeholder="https://github.com/usuario/repositorio"
+                className="w-full px-4 py-3 bg-surface-container-highest border border-outline-variant/20 rounded-lg text-on-surface placeholder:text-on-surface-variant/50 focus:border-primary/50 focus:outline-none"
+              />
+              <p className="mt-2 text-xs leading-relaxed text-text-secondary">
+                Você pode colar a URL raiz do repositório ou uma URL com paths
+                extras; o sistema salva a versão canônica do repo.
+              </p>
+            </div>
+
+            {repositoryPreview ? (
+              <div className="rounded-[24px] border border-success/25 bg-success/10 px-5 py-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-success">
+                      Repositório identificado
+                    </span>
+                    <strong className="mt-2 block text-base text-white">
+                      {repositoryPreview.slug}
+                    </strong>
+                    <p className="mt-1 text-sm text-text-secondary">
+                      Será salvo como {repositoryPreview.normalizedUrl}
+                    </p>
+                  </div>
+                  <FolderGit2 size={20} className="text-success" />
+                </div>
+              </div>
+            ) : null}
+
+            <div className="flex flex-wrap justify-between gap-3 border-t border-border/50 pt-5">
+              <div className="flex flex-wrap gap-2.5">
+                {selectedRepository ? (
+                  <>
+                    <ActionButton
+                      type="button"
+                      variant="ghost"
+                      onClick={() => window.open(selectedRepository.normalizedUrl, "_blank")}
+                      disabled={githubSaving}
+                    >
+                      <ExternalLink size={16} />
+                      Abrir repositório
+                    </ActionButton>
+                    <ActionButton
+                      type="button"
+                      variant="secondary"
+                      onClick={() => void handleGitHubDisconnect()}
+                      disabled={githubSaving}
+                      className="border-danger/30 bg-danger/10 text-danger hover:border-danger/50 hover:bg-danger/20 hover:text-danger"
+                    >
+                      {githubSaving ? (
+                        <>
+                          <LoaderCircle size={16} className="animate-spin" />
+                          Removendo...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 size={16} />
+                          Remover vínculo
+                        </>
+                      )}
+                    </ActionButton>
+                  </>
+                ) : null}
+              </div>
+
+              <div className="flex flex-wrap gap-2.5">
+                <ActionButton
+                  type="button"
+                  variant="secondary"
+                  onClick={closeGitHubModal}
+                  disabled={githubSaving}
+                >
+                  Cancelar
+                </ActionButton>
+                <ActionButton
+                  type="button"
+                  onClick={() => void handleGitHubConnect()}
+                  disabled={!githubRepoUrl.trim() || githubSaving}
+                >
+                  {githubSaving ? (
+                    <>
+                      <LoaderCircle size={16} className="animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <FolderGit2 size={16} />
+                      {selectedRepository ? "Atualizar vínculo" : "Conectar repositório"}
+                    </>
+                  )}
+                </ActionButton>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </WorkspaceModal>
 
       <ProjectModal
@@ -758,19 +1031,6 @@ function ProjectModal({
         </Field>
       </ModalForm>
     </WorkspaceModal>
-  );
-}
-
-function MetricTile({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-[20px] border border-border/60 bg-background/55 px-4 py-3">
-      <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-text-secondary">
-        {label}
-      </p>
-      <strong className="mt-2 block font-display text-xl text-white">
-        {value}
-      </strong>
-    </div>
   );
 }
 

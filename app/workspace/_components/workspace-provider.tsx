@@ -33,7 +33,6 @@ import {
   saveSessionRow,
   saveSettingsRow,
   saveTaskRow,
-  saveNotificationRow,
   markNotificationAsRead,
   markAllNotificationsAsRead,
   deleteNotificationRow,
@@ -50,6 +49,7 @@ import {
   featureAccess,
   sortByIsoDesc,
 } from "@/utils/workspace/helpers";
+import { resolveProjectOptionalField } from "@/utils/workspace/projects";
 import type {
   AppSettingsRow,
   BillingPlanCode,
@@ -421,14 +421,21 @@ export function WorkspaceProvider({
     const row: ProjectRow = {
       id: payload.id ?? existing?.id ?? randomId(),
       user_id: initialUser.id,
-      track_id: payload.track_id ?? existing?.track_id ?? null,
+      track_id: resolveProjectOptionalField(payload, existing, "track_id"),
       title: payload.title ?? existing?.title ?? "Novo projeto",
       scope: payload.scope ?? existing?.scope ?? "Entrega prática",
       description: payload.description ?? existing?.description ?? "",
-      repository_url: payload.repository_url ?? existing?.repository_url ?? null,
-      documentation_url:
-        payload.documentation_url ?? existing?.documentation_url ?? null,
-      video_url: payload.video_url ?? existing?.video_url ?? null,
+      repository_url: resolveProjectOptionalField(
+        payload,
+        existing,
+        "repository_url",
+      ),
+      documentation_url: resolveProjectOptionalField(
+        payload,
+        existing,
+        "documentation_url",
+      ),
+      video_url: resolveProjectOptionalField(payload, existing, "video_url"),
       status: payload.status ?? existing?.status ?? "planned",
       progress_percent:
         payload.progress_percent ?? existing?.progress_percent ?? 0,

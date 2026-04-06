@@ -9,6 +9,10 @@ const BILLING_FUNCTIONS = {
   sync: "billing-sync-subscription",
 } as const;
 
+const STRIPE_API_BASE_URL = "https://api.stripe.com/v1";
+const STRIPE_API_VERSION = "2026-02-25.clover";
+const EDGE_FUNCTION_NOT_FOUND_MESSAGE = "requested function was not found";
+
 export class BillingServiceError extends Error {
   constructor(message: string, readonly status = 500) {
     super(message);
@@ -44,12 +48,35 @@ export async function createPortalOnServer(
   },
   requestId?: string,
 ) {
-  return await invokeBillingFunctionOnServer<{ url: string }>(
-    request,
-    BILLING_FUNCTIONS.portal,
-    payload.returnUrl ? { returnUrl: payload.returnUrl } : {},
-    requestId,
-  );
+  try {
+    return await invokeBillingFunctionOnServer<{ url: string }>(
+      request,
+      BILLING_FUNCTIONS.portal,
+      payload.returnUrl ? { returnUrl: payload.returnUrl } : {},
+      requestId,
+    );
+  } catch (error) {
+    if (!shouldUseDirectStripePortalFallback(error)) {
+      throw error;
+    }
+
+    logServerEvent({
+      area: "billing",
+      event: "portal_function_missing_direct_fallback",
+      level: "warn",
+      requestId,
+      metadata: {
+        functionName: BILLING_FUNCTIONS.portal,
+        message: error instanceof Error ? error.message : "Unknown portal error.",
+      },
+    });
+
+    return await createPortalSessionDirectlyOnServer(
+      request,
+      payload.returnUrl ?? null,
+      requestId,
+    );
+  }
 }
 
 export async function cancelSubscriptionOnServer(request: Request, requestId?: string) {
@@ -209,6 +236,146 @@ function readBillingErrorPayload(payload: unknown) {
   }
 
   return "";
+}
+
+function readStripeErrorPayload(payload: unknown) {
+  if (!payload || typeof payload !== "object") {
+    return "";
+  }
+
+  if (
+    "error" in payload &&
+    payload.error &&
+    typeof payload.error === "object" &&
+    "message" in payload.error &&
+    payload.error.message
+  ) {
+    return String(payload.error.message);
+  }
+
+  return readBillingErrorPayload(payload);
+}
+
+function shouldUseDirectStripePortalFallback(error: unknown) {
+  if (!(error instanceof BillingServiceError)) {
+    return false;
+  }
+
+  const normalizedMessage = error.message.toLowerCase();
+  return (
+    error.status === 404 ||
+    normalizedMessage.includes(EDGE_FUNCTION_NOT_FOUND_MESSAGE)
+  );
+}
+
+function resolveStripeSecretKey() {
+  return (
+    process.env.STRIPE_SECRET_KEY?.trim() ||
+    process.env.PRODUCT_STRIPE_SECRET_KEY?.trim() ||
+    null
+  );
+}
+
+async function createPortalSessionDirectlyOnServer(
+  request: Request,
+  returnUrl: string | null,
+  requestId?: string,
+) {
+  const secretKey = resolveStripeSecretKey();
+  if (!secretKey) {
+    throw new BillingServiceError(
+      "O portal de assinatura nao esta configurado neste ambiente.",
+      503,
+    );
+  }
+
+  const snapshot = await getBillingSnapshotOnServer(request, requestId);
+  const provider = snapshot.customer?.gateway_provider ?? snapshot.config.billing_provider;
+  const customerId = snapshot.customer?.gateway_customer_id?.trim() ?? "";
+
+  if (provider !== "stripe") {
+    throw new BillingServiceError(
+      "O portal de assinatura nao esta disponivel para o provedor configurado.",
+      503,
+    );
+  }
+
+  if (!customerId) {
+    throw new BillingServiceError(
+      "Nao foi possivel localizar o cliente de billing desta conta.",
+      409,
+    );
+  }
+
+  const body = new URLSearchParams();
+  body.set("customer", customerId);
+
+  if (returnUrl) {
+    body.set("return_url", returnUrl);
+  }
+
+  const response = await fetch(`${STRIPE_API_BASE_URL}/billing_portal/sessions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${secretKey}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Stripe-Version": STRIPE_API_VERSION,
+    },
+    body: body.toString(),
+    cache: "no-store",
+  });
+
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const providerMessage = readStripeErrorPayload(payload);
+
+    logServerEvent({
+      area: "billing",
+      event: "direct_portal_failed",
+      level: response.status >= 500 ? "error" : "warn",
+      requestId,
+      status: response.status,
+      metadata: {
+        message: providerMessage || "Stripe portal request failed.",
+      },
+    });
+
+    if (response.status === 404) {
+      throw new BillingServiceError(
+        "Nao foi possivel localizar o cliente de billing desta conta.",
+        409,
+      );
+    }
+
+    if (response.status === 401 || response.status === 403) {
+      throw new BillingServiceError(
+        "O portal de assinatura nao esta configurado corretamente neste ambiente.",
+        503,
+      );
+    }
+
+    throw new BillingServiceError(
+      "Nao foi possivel abrir o portal de assinatura agora.",
+      response.status >= 500 ? 502 : response.status,
+    );
+  }
+
+  if (
+    !payload ||
+    typeof payload !== "object" ||
+    !("url" in payload) ||
+    typeof payload.url !== "string"
+  ) {
+    throw new BillingServiceError(
+      "Resposta invalida ao criar sessao do portal.",
+      502,
+    );
+  }
+
+  return {
+    url: payload.url,
+  };
 }
 
 async function invokeBillingFunctionOnServer<T>(

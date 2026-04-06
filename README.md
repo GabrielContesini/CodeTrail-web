@@ -35,6 +35,7 @@ Base minima para rodar local e na Vercel:
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 STRIPE_PUBLISHABLE_KEY=
+STRIPE_SECRET_KEY=
 ```
 
 Variaveis opcionais:
@@ -127,6 +128,7 @@ Limitacoes externas deliberadas:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `STRIPE_PUBLISHABLE_KEY`
+   - `STRIPE_SECRET_KEY` para fallback local do portal de assinatura quando a Edge Function correspondente nao estiver disponivel
 
 ## CI/CD
 

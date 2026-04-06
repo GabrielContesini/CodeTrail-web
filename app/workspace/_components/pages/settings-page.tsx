@@ -121,6 +121,14 @@ export function SettingsPage() {
     setCancelModalOpen(false);
   }
 
+  async function handleOpenPortal() {
+    try {
+      await openPortal();
+    } catch {
+      // O provider ja registra a mensagem para a UI; aqui evitamos uma promise rejeitada escapar do clique.
+    }
+  }
+
   return (
     <>
       <motion.main
@@ -414,7 +422,7 @@ export function SettingsPage() {
                   PORTAL DE FATURAMENTO
                 </button>
                 <button
-                  onClick={() => void openPortal()}
+                  onClick={() => void handleOpenPortal()}
                   disabled={
                     !billing.subscription ||
                     currentPlanCode === "free" ||
