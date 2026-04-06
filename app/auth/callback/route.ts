@@ -10,6 +10,7 @@ import {
   parseAuthPlan,
 } from "@/utils/auth/oauth";
 import { persistPlanIntent } from "@/utils/auth/plan-intent";
+import { findExistingAccountConflict } from "@/utils/server/auth-session-conflict";
 import { createRequestId, logServerEvent } from "@/utils/server/observability";
 import { sendWelcomeEmailIfNeeded } from "@/utils/server/subscription-email";
 
@@ -105,6 +106,37 @@ export async function GET(request: NextRequest) {
       requestId,
       metadata: {
         message: userError?.message ?? "missing_user_after_exchange",
+      },
+    });
+
+    return NextResponse.redirect(new URL(destination, request.url), 303);
+  }
+
+  const existingAccountConflict = await findExistingAccountConflict({
+    currentUserId: user.id,
+    email: user.email,
+  });
+
+  if (existingAccountConflict) {
+    await supabase.auth.signOut();
+
+    const destination = buildAuthErrorRedirect({
+      plan,
+      target,
+      nextPath,
+      checkoutReturnTo,
+      message: existingAccountConflict.message,
+    });
+
+    logServerEvent({
+      area: "auth",
+      event: "google_oauth_existing_account_conflict",
+      level: "warn",
+      requestId,
+      userId: user.id,
+      metadata: {
+        conflictingProfileId: existingAccountConflict.conflictingProfileId,
+        email: existingAccountConflict.email,
       },
     });
 

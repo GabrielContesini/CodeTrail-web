@@ -1,4 +1,8 @@
 import { labelForSkillLevel } from "@/utils/workspace/helpers";
+import {
+  calculateSkillThreeLevel,
+  calculateSkillThreeTotalXp,
+} from "@/utils/skillthree/progression";
 import type {
   ReviewRow,
   TaskRow,
@@ -388,24 +392,36 @@ function resolveTotalXp(
   const achievementXp = achievements
     .filter((achievement) => achievement.status !== "locked")
     .reduce((total, achievement) => total + achievement.xpBonus, 0);
+  const sessionHours = data.sessions.reduce((total, session) => {
+    return total + Number(session.duration_minutes || 0) / 60;
+  }, 0);
+  const completedReviews = data.reviews.filter(
+    (review) => review.status === "completed",
+  ).length;
+  const completedTasks = data.tasks.filter((task) => task.status === "completed").length;
+  const projectXp = data.projects.reduce((total, project) => {
+    const progress = Number(project.progress_percent || 0);
+    const completionBonus = project.status === "completed" ? 140 : 0;
+    return total + Math.round(progress * 1.3) + completionBonus;
+  }, 0);
+  const trackXp = data.trackStates.reduce((total, row) => {
+    return total + Math.round(Number(row.progress_percent || 0) * 8);
+  }, 0);
 
-  return (
-    skillXp +
-    achievementXp +
-    data.sessions.length * 36 +
-    data.dashboardSummary.hoursThisWeek * 42 +
-    data.reviews.filter((review) => review.status === "completed").length * 24
-  );
+  return calculateSkillThreeTotalXp({
+    skillXp,
+    achievementXp,
+    sessionCount: data.sessions.length,
+    sessionHours,
+    completedReviews,
+    completedTasks,
+    projectXp,
+    trackXp,
+  });
 }
 
 function resolveLevel(totalXp: number) {
-  const level = Math.max(1, Math.floor(totalXp / 320) + 1);
-  const nextLevelXp = level >= 20 ? null : level * 320;
-
-  return {
-    level,
-    nextLevelXp,
-  };
+  return calculateSkillThreeLevel(totalXp);
 }
 
 function buildLeaderboard(

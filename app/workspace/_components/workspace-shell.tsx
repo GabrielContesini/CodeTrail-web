@@ -9,7 +9,13 @@ import {
     staggerContainerVariants,
     useMotionPreferences,
 } from "@/app/components/ui/motion-system";
+import { SkillThreeProgressToast } from "@/app/workspace/_components/skillthree-progress-toast";
 import { useWorkspace } from "@/app/workspace/_components/workspace-provider";
+import { buildSkillThreeExperience } from "@/utils/skillthree/build-skillthree";
+import {
+  createSkillThreeProgressSnapshot,
+  resolveSkillThreeProgressToast,
+} from "@/utils/skillthree/progression";
 import { PRIVACY_PREFERENCES_OPEN_EVENT } from "@/utils/privacy/preferences";
 import {
     getInitials,
@@ -67,19 +73,27 @@ function cx(...parts: Array<string | false | null | undefined>) {
 
 export function WorkspaceShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { data, user, refreshing, operation, reload, signOut, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification } = useWorkspace();
+  const { data, loading, user, refreshing, operation, reload, signOut, markNotificationAsRead, markAllNotificationsAsRead } = useWorkspace();
   const [collapsed, setCollapsed] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const commandRef = React.useRef<HTMLDivElement>(null);
   const [showContent, setShowContent] = useState(false);
+  const [skillThreeToast, setSkillThreeToast] = useState<ReturnType<typeof resolveSkillThreeProgressToast>>(null);
+  const previousSkillThreeProgressRef = React.useRef<ReturnType<typeof createSkillThreeProgressSnapshot> | null>(null);
+  const skillThreeProgressReadyRef = React.useRef(false);
+  const skillThree = React.useMemo(() => buildSkillThreeExperience(data), [data]);
+  const skillThreeActiveTrackId = skillThree.activeTrack?.id ?? null;
+  const skillThreeProgressSnapshot = createSkillThreeProgressSnapshot(skillThree);
   
   useEffect(() => {
-    if (data && !showContent) {
-      const timer = setTimeout(() => setShowContent(true), 50);
-      return () => clearTimeout(timer);
+    if (loading || showContent) {
+      return;
     }
-  }, [data, showContent]);
+
+    const timer = setTimeout(() => setShowContent(true), 50);
+    return () => clearTimeout(timer);
+  }, [loading, showContent]);
   
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -94,13 +108,57 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (loading || !skillThreeActiveTrackId) {
+      previousSkillThreeProgressRef.current = null;
+      skillThreeProgressReadyRef.current = false;
+      return;
+    }
+
+    const currentSnapshot = skillThreeProgressSnapshot;
+    const previousSnapshot = previousSkillThreeProgressRef.current;
+    previousSkillThreeProgressRef.current = currentSnapshot;
+
+    if (!skillThreeProgressReadyRef.current) {
+      skillThreeProgressReadyRef.current = true;
+      return;
+    }
+
+    if (!previousSnapshot) {
+      return;
+    }
+
+    const nextToast = resolveSkillThreeProgressToast(previousSnapshot, currentSnapshot);
+    if (!nextToast) {
+      return;
+    }
+
+    setSkillThreeToast(nextToast);
+  }, [
+    loading,
+    skillThreeActiveTrackId,
+    skillThreeProgressSnapshot,
+  ]);
+
+  useEffect(() => {
+    if (!skillThreeToast) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setSkillThreeToast(null);
+    }, 3600);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [skillThreeToast]);
+
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [dateLabel, setDateLabel] = useState("Sincronizando horario");
   const { reduced, hoverLift, press, transition } = useMotionPreferences();
   const section = resolveSection(pathname.split("/").filter(Boolean).slice(1));
   const meta = routeMetaBySection[section];
-  const sidebarWidthClass = collapsed ? "md:w-[96px]" : "md:w-[280px]";
-  const sidebarPaddingClass = collapsed ? "md:!px-3 md:!py-5" : "";
   const sidebarShellTransition = reduced
     ? "transition-all duration-200"
     : "transition-all duration-400 ease-out";
@@ -136,16 +194,6 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
       window.clearInterval(intervalId);
     };
   }, []);
-
-  const sidebarStats = [
-    {
-      label: "Horas semana",
-      value: `${summary?.hoursThisWeek.toFixed(1) ?? "0.0"}h`,
-    },
-    { label: "Pendências", value: `${summary?.pendingTasks ?? 0}` },
-  ];
-  const iconLinkClass =
-    "touch-target inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-transparent bg-transparent text-text-secondary transition-[color,background-color,border-color,transform] duration-200 hover:border-border/80 hover:bg-white/[0.05] hover:text-white";
 
   return (
     <LayoutGroup id="workspace-shell">
@@ -553,6 +601,21 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
         </motion.main>
 
         <AnimatePresence>
+          {skillThreeToast ? (
+            <motion.div
+              initial={{ opacity: 0, y: 14, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.98 }}
+              transition={{ duration: reduced ? 0 : 0.18 }}
+              className="fixed right-4 top-24 z-[75] w-[min(360px,calc(100vw-2rem))]"
+            >
+              <SkillThreeProgressToast
+                xpDelta={skillThreeToast.xpDelta}
+                levelUpTo={skillThreeToast.levelUpTo}
+                unlockedDelta={skillThreeToast.unlockedDelta}
+              />
+            </motion.div>
+          ) : null}
           {operation ? (
             <motion.div
               data-testid="workspace-operation-modal"

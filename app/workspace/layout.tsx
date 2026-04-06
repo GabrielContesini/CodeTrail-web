@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { WorkspaceProvider } from "@/app/workspace/_components/workspace-provider";
 import { WorkspaceShell } from "@/app/workspace/_components/workspace-shell";
+import { findExistingAccountConflict } from "@/utils/server/auth-session-conflict";
 
 export default async function WorkspaceLayout({
   children,
@@ -15,6 +16,15 @@ export default async function WorkspaceLayout({
 
   if (!user) {
     redirect("/auth");
+  }
+
+  const existingAccountConflict = await findExistingAccountConflict({
+    currentUserId: user.id,
+    email: user.email,
+  });
+
+  if (existingAccountConflict) {
+    redirect("/auth/reset-session?reason=existing_account_conflict");
   }
 
   return (

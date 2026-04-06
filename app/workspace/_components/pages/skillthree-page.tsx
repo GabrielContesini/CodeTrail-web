@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Activity,
   Award,
@@ -14,7 +14,7 @@ import {
   VolumeX,
   Zap,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Pill,
@@ -27,6 +27,7 @@ import {
 } from "@/app/components/ui/motion-system";
 import { useWorkspace } from "@/app/workspace/_components/workspace-provider";
 import { buildSkillThreeExperience } from "@/utils/skillthree/build-skillthree";
+import { formatSkillThreeXp } from "@/utils/skillthree/progression";
 import type {
    SkillThreeAchievementState,
    SkillThreeExperience,
@@ -58,34 +59,21 @@ function renderIcon(key: string, size = 18) {
   return <Icon size={size} />;
 }
 
-function formatXp(value: number) {
-  return new Intl.NumberFormat("pt-BR").format(Math.round(value));
-}
-
 export function SkillThreePage() {
   const { data } = useWorkspace();
   const skillThree = useMemo(() => buildSkillThreeExperience(data), [data]);
   const reducedMotion = useStableReducedMotion();
   const router = useRouter();
+  const activeTrackId = skillThree.activeTrack?.id ?? null;
    const [leaderboardScope, setLeaderboardScope] =
      useState<SkillThreeLeaderboardScope>("global");
    const [achievementsOpen, setAchievementsOpen] = useState(false);
    const [leaderboardOpen, setLeaderboardOpen] = useState(false);
    const [selectedNode, setSelectedNode] = useState<SkillThreeNodeState | null>(null);
    const [selectedMission, setSelectedMission] = useState<SkillThreeMissionState | null>(null);
-   const [zoom, setZoom] = useState(1);
+   const zoom = 1;
    const [leaderboardByScope, setLeaderboardByScope] = useState(skillThree.leaderboardByScope);
    const [leaderboardSource, setLeaderboardSource] = useState("fallback");
-   const [progressToast, setProgressToast] = useState<null | {
-     xpDelta: number;
-     levelUpTo: number | null;
-     unlockedDelta: number;
-   }>(null);
-   const previousProgressRef = useRef<null | {
-     xp: number;
-     level: number;
-     unlocked: number;
-   }>(null);
 
   useEffect(() => {
     setLeaderboardByScope(skillThree.leaderboardByScope);
@@ -93,7 +81,7 @@ export function SkillThreePage() {
   }, [skillThree]);
 
   useEffect(() => {
-    if (!skillThree.activeTrack || !data?.profile?.id) {
+    if (!activeTrackId || !data?.profile?.id) {
       return;
     }
 
@@ -130,54 +118,7 @@ export function SkillThreePage() {
     return () => {
       active = false;
     };
-  }, [data?.profile?.id, skillThree.activeTrack?.id]);
-
-  useEffect(() => {
-    const current = {
-      xp: skillThree.totalXp,
-      level: skillThree.level.level,
-      unlocked: skillThree.unlockedAchievements.length,
-    };
-
-    const previous = previousProgressRef.current;
-    previousProgressRef.current = current;
-
-    if (!previous) {
-      return;
-    }
-
-    const xpDelta = current.xp - previous.xp;
-    const unlockedDelta = current.unlocked - previous.unlocked;
-    const levelUpTo = current.level > previous.level ? current.level : null;
-
-    if (xpDelta <= 0 && unlockedDelta <= 0 && !levelUpTo) {
-      return;
-    }
-
-    setProgressToast({
-      xpDelta: Math.max(xpDelta, 0),
-      levelUpTo,
-      unlockedDelta: Math.max(unlockedDelta, 0),
-    });
-  }, [
-    skillThree.level.level,
-    skillThree.totalXp,
-    skillThree.unlockedAchievements.length,
-  ]);
-
-  useEffect(() => {
-    if (!progressToast) {
-      return;
-    }
-
-    const timeout = window.setTimeout(() => {
-      setProgressToast(null);
-    }, 3600);
-
-    return () => {
-      window.clearTimeout(timeout);
-    };
-  }, [progressToast]);
+  }, [activeTrackId, data?.profile?.id]);
 
   const leaderboard =
     leaderboardByScope[
@@ -246,24 +187,6 @@ export function SkillThreePage() {
 
   return (
     <>
-      <AnimatePresence>
-        {progressToast ? (
-          <motion.div
-            initial={{ opacity: 0, y: 14, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.98 }}
-            transition={{ duration: reducedMotion ? 0 : 0.18 }}
-            className="fixed right-4 top-24 z-[75] w-[min(360px,calc(100vw-2rem))]"
-          >
-            <ProgressGainToast
-              xpDelta={progressToast.xpDelta}
-              levelUpTo={progressToast.levelUpTo}
-              unlockedDelta={progressToast.unlockedDelta}
-            />
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-
       <motion.div
         initial="hidden"
         animate="visible"
@@ -287,8 +210,8 @@ export function SkillThreePage() {
                  <Zap size={18} className="text-primary" />
                </div>
                <div className="min-w-0">
-                 <p className="text-[10px] text-[#adaaaa] font-black uppercase tracking-widest leading-tight mb-0.5">Pontos XP</p>
-                 <p className="text-lg font-black text-white truncate">{formatXp(skillThree.totalXp)}</p>
+                  <p className="text-[10px] text-[#adaaaa] font-black uppercase tracking-widest leading-tight mb-0.5">Pontos XP</p>
+                 <p className="text-lg font-black text-white truncate">{formatSkillThreeXp(skillThree.totalXp)}</p>
                </div>
              </div>
              <div className="bg-[#1a1a1a] border border-white/[0.05] p-4 rounded-lg flex items-center gap-4 w-[200px]">
@@ -329,17 +252,17 @@ export function SkillThreePage() {
                    <p className="text-xl font-black text-white">{skillThree.skillTree.filter((node) => node.status !== "locked").length} / {skillThree.formationProgress.totalNodes}</p>
                  </div>
                  <div className="text-center border-r border-white/[0.05]">
-                   <p className="text-[9px] text-[#adaaaa] uppercase font-black tracking-wider mb-2">XP total</p>
-                   <p className="text-xl font-black text-primary">{formatXp(skillThree.totalXp)}</p>
-                 </div>
-                 <div className="text-center">
-                   <p className="text-[9px] text-[#adaaaa] uppercase font-black tracking-wider mb-2">Próximo Desbloqueio</p>
-                   <p className="text-xl font-black text-white">
-                     {skillThree.level.nextLevelXp
-                       ? `${formatXp(skillThree.level.nextLevelXp - skillThree.totalXp)} XP`
-                       : "MÁXIMO"}
-                   </p>
-                 </div>
+                 <p className="text-[9px] text-[#adaaaa] uppercase font-black tracking-wider mb-2">XP total</p>
+                 <p className="text-xl font-black text-primary">{formatSkillThreeXp(skillThree.totalXp)}</p>
+               </div>
+               <div className="text-center">
+                 <p className="text-[9px] text-[#adaaaa] uppercase font-black tracking-wider mb-2">Próximo Desbloqueio</p>
+                 <p className="text-xl font-black text-white">
+                   {skillThree.level.nextLevelXp
+                      ? `${formatSkillThreeXp(skillThree.level.nextLevelXp - skillThree.totalXp)} XP`
+                      : "MÁXIMO"}
+                  </p>
+                </div>
                </div>
              </div>
            </section>
@@ -414,7 +337,7 @@ export function SkillThreePage() {
                          <p className="text-[9px] text-[#adaaaa] font-medium">{entry.isCurrentUser ? 'VOCÊ' : `Nv. ${entry.level}`}</p>
                        </div>
                        <div className="text-right flex-shrink-0">
-                         <p className="text-[10px] font-black text-primary tracking-tight">{formatXp(entry.weeklyXp)} XP</p>
+                         <p className="text-[10px] font-black text-primary tracking-tight">{formatSkillThreeXp(entry.weeklyXp)} XP</p>
                          <div className="flex gap-0.5 justify-end mt-0.5">
                            <div className="w-1 h-1 bg-primary rounded-full"></div>
                            <div className={`w-1 h-1 ${entry.isCurrentUser ? 'bg-primary' : 'bg-white/20'} rounded-full`}></div>
@@ -992,7 +915,7 @@ function LeaderboardRow({
         </p>
       </div>
       <div className="text-right">
-        <p className="text-sm font-black text-primary">{formatXp(entry.weeklyXp)} XP</p>
+        <p className="text-sm font-black text-primary">{formatSkillThreeXp(entry.weeklyXp)} XP</p>
         <p className="text-[11px] text-text-secondary">
           {entry.positionDelta > 0 ? `+${entry.positionDelta}` : entry.positionDelta}
         </p>
@@ -1431,45 +1354,6 @@ function AchievementCard({
               Lv. recomendado {achievement.recommendedLevel}
             </p>
           ) : null}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ProgressGainToast({
-  xpDelta,
-  levelUpTo,
-  unlockedDelta,
-}: {
-  xpDelta: number;
-  levelUpTo: number | null;
-  unlockedDelta: number;
-}) {
-  return (
-    <div className="overflow-hidden rounded-[24px] border border-primary/16 bg-[rgba(9,17,24,0.94)] p-4 shadow-[0_24px_60px_rgba(0,0,0,0.38)] backdrop-blur-xl">
-      <div className="flex items-start gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
-          <Zap size={18} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">
-            Progressão atualizada
-          </p>
-          <p className="mt-2 text-lg font-black tracking-tight text-white">
-            {xpDelta > 0 ? `+${formatXp(xpDelta)} XP` : "Novo progresso registrado"}
-          </p>
-          <div className="mt-2 space-y-1 text-xs text-text-secondary">
-            {levelUpTo ? <p>Nível {levelUpTo} liberado.</p> : null}
-            {unlockedDelta > 0 ? (
-              <p>
-                {unlockedDelta} {unlockedDelta === 1 ? "conquista liberada." : "conquistas liberadas."}
-              </p>
-            ) : null}
-            {!levelUpTo && unlockedDelta === 0 && xpDelta > 0 ? (
-              <p>Seu avanço no SkillThree acabou de ser sincronizado.</p>
-            ) : null}
-          </div>
         </div>
       </div>
     </div>

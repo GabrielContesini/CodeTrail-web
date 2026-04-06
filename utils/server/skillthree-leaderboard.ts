@@ -1,4 +1,5 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { calculateSkillThreeLevel } from "@/utils/skillthree/progression";
 import { labelForSkillLevel } from "@/utils/workspace/helpers";
 import { createClient } from "@/utils/supabase/server";
 import type {
@@ -13,7 +14,6 @@ import type {
 
 const MAX_PROFILES = 36;
 const MAX_ENTRIES = 12;
-const LEVEL_XP_STEP = 320;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 type LeaderboardProfileRow = Pick<
@@ -280,26 +280,6 @@ async function loadCurrentProfile(
   );
 }
 
-function createCurrentUserEntry(profile: LeaderboardProfileRow): ComputedLeaderboardEntry {
-  const name = resolveProfileName(profile);
-
-  return {
-    id: profile.id,
-    name,
-    avatarUrl: profile.avatar_url,
-    badge: profile.selected_track_id ? "TRILHA" : "VOCÊ",
-    badgeKey: profile.selected_track_id,
-    rankLabel: labelForSkillLevel(profile.current_level ?? "beginner"),
-    level: 1,
-    weeklyXp: 0,
-    positionDelta: 0,
-    isCurrentUser: true,
-    globalScore: 0,
-    weeklyScore: 0,
-    trackScore: 0,
-  };
-}
-
 async function loadCurrentUserLeaderboardEntry(
   sessionClient: Awaited<ReturnType<typeof createClient>>,
   currentProfile: LeaderboardProfileRow,
@@ -540,7 +520,7 @@ function resolveProfileName(profile: LeaderboardProfileRow) {
 }
 
 function resolveLevel(totalXp: number) {
-  return Math.max(1, Math.floor(totalXp / LEVEL_XP_STEP) + 1);
+  return calculateSkillThreeLevel(totalXp).level;
 }
 
 function filterByUser<T extends { user_id: string }>(rows: T[], userId: string) {
