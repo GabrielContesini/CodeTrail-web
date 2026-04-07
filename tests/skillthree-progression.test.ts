@@ -403,6 +403,7 @@ describe("SkillThree progression", () => {
     const current = {
       xp: 1430,
       level: 5,
+      nextLevelXp: 1600,
       unlocked: 2,
     };
 
@@ -410,6 +411,8 @@ describe("SkillThree progression", () => {
       xpDelta: 230,
       levelUpTo: 5,
       unlockedDelta: 1,
+      currentXp: 1430,
+      nextLevelXp: 1600,
     });
     expect(resolveSkillThreeProgressToast(current, current)).toBeNull();
   });

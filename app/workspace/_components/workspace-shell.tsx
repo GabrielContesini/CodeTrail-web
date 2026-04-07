@@ -607,12 +607,13 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.98 }}
               transition={{ duration: reduced ? 0 : 0.18 }}
-              className="fixed right-4 top-24 z-[75] w-[min(360px,calc(100vw-2rem))]"
             >
               <SkillThreeProgressToast
                 xpDelta={skillThreeToast.xpDelta}
                 levelUpTo={skillThreeToast.levelUpTo}
                 unlockedDelta={skillThreeToast.unlockedDelta}
+                currentXp={skillThreeToast.currentXp}
+                nextLevelXp={skillThreeToast.nextLevelXp}
               />
             </motion.div>
           ) : null}

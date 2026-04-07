@@ -586,8 +586,9 @@ export async function deleteProjectStepWithProgress(
 }
 
 export async function saveNoteRow(supabase: SupabaseClient, payload: StudyNoteRow) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { module_id, project_id, track_id, ...dbPayload } = payload;
-  await upsertWorkspaceRow(supabase, "study_notes", dbPayload as any);
+  await upsertWorkspaceRow(supabase, "study_notes", dbPayload as never);
 }
 
 export async function deleteNoteRow(supabase: SupabaseClient, id: string) {

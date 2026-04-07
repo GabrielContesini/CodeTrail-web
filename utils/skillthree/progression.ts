@@ -17,6 +17,7 @@ export interface SkillThreeTotalXpInput {
 export interface SkillThreeProgressSnapshot {
   xp: number;
   level: number;
+  nextLevelXp: number | null;
   unlocked: number;
 }
 
@@ -24,6 +25,8 @@ export interface SkillThreeProgressToastState {
   xpDelta: number;
   levelUpTo: number | null;
   unlockedDelta: number;
+  currentXp: number;
+  nextLevelXp: number | null;
 }
 
 export function calculateSkillThreeTotalXp(input: SkillThreeTotalXpInput) {
@@ -54,6 +57,7 @@ export function createSkillThreeProgressSnapshot(
   return {
     xp: experience.totalXp,
     level: experience.level.level,
+    nextLevelXp: experience.level.nextLevelXp,
     unlocked: experience.unlockedAchievements.length,
   };
 }
@@ -74,6 +78,8 @@ export function resolveSkillThreeProgressToast(
     xpDelta: Math.max(xpDelta, 0),
     levelUpTo,
     unlockedDelta: Math.max(unlockedDelta, 0),
+    currentXp: current.xp,
+    nextLevelXp: current.nextLevelXp,
   };
 }
 
