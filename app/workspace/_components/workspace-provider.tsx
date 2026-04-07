@@ -211,23 +211,27 @@ export function WorkspaceProvider({
     return result;
   }
 
-  function beginOperation(nextOperation: WorkspaceOperationState) {
+  function beginOperation(nextOperation?: WorkspaceOperationState | null) {
     pendingOperationsRef.current += 1;
     setRefreshing(true);
-    setOperation(nextOperation);
+    if (nextOperation) {
+      setOperation(nextOperation);
+    }
   }
 
-  function finishOperation() {
+  function finishOperation(hadOperation: boolean) {
     pendingOperationsRef.current = Math.max(0, pendingOperationsRef.current - 1);
 
     if (pendingOperationsRef.current === 0) {
       setRefreshing(false);
       setOperation(null);
+    } else if (hadOperation && pendingOperationsRef.current > 0) {
+      setOperation(null);
     }
   }
 
   async function withOperation<T>(
-    nextOperation: WorkspaceOperationState,
+    nextOperation: WorkspaceOperationState | null | undefined,
     action: () => Promise<T>,
   ) {
     const startedAt = Date.now();
@@ -238,12 +242,12 @@ export function WorkspaceProvider({
       return await action();
     } finally {
       const elapsed = Date.now() - startedAt;
-      if (elapsed < MIN_OPERATION_MODAL_MS) {
+      if (nextOperation && elapsed < MIN_OPERATION_MODAL_MS) {
         await new Promise((resolve) => {
           window.setTimeout(resolve, MIN_OPERATION_MODAL_MS - elapsed);
         });
       }
-      finishOperation();
+      finishOperation(!!nextOperation);
     }
   }
 
@@ -259,7 +263,7 @@ export function WorkspaceProvider({
 
   async function runMutation(
     action: () => Promise<void>,
-    nextOperation: WorkspaceOperationState = genericMutationOperation(),
+    nextOperation: WorkspaceOperationState | null | undefined = genericMutationOperation(),
     reloadAfter = true,
   ) {
     try {
@@ -326,14 +330,34 @@ export function WorkspaceProvider({
   async function saveSession(payload: Partial<StudySessionRow>) {
     const existing = data?.sessions.find((item) => item.id === payload.id);
     const now = nowIso();
+    
+    const startTime = payload.start_time ?? existing?.start_time ?? now;
+    const durationMinutes = payload.duration_minutes ?? existing?.duration_minutes ?? 30;
+    let endTime = payload.end_time ?? existing?.end_time;
+    
+    if (!endTime) {
+      const startMs = new Date(startTime).getTime();
+      endTime = new Date(startMs + durationMinutes * 60000).toISOString();
+    }
+
     const row: StudySessionRow = {
-      ...existing!,
+      ...existing,
       ...payload,
       id: payload.id ?? existing?.id ?? randomId(),
       user_id: initialUser.id,
+      start_time: startTime,
+      end_time: endTime,
+      duration_minutes: durationMinutes,
+      type: payload.type ?? existing?.type ?? "focus",
+      notes: payload.notes ?? existing?.notes ?? "",
+      productivity_score: payload.productivity_score ?? existing?.productivity_score ?? 3,
+      track_id: payload.track_id ?? existing?.track_id ?? null,
+      skill_id: payload.skill_id ?? existing?.skill_id ?? null,
+      module_id: payload.module_id ?? existing?.module_id ?? null,
       created_at: existing?.created_at ?? now,
       updated_at: now,
-    };
+    } as StudySessionRow;
+    
     await runMutation(() => saveSessionRow(supabase, row), saveOperation("sessao"), true);
   }
 
@@ -623,7 +647,14 @@ export function WorkspaceProvider({
     grade: "again" | "hard" | "good" | "easy",
   ) {
     const updated = applyFlashcardReview(flashcard, grade);
-    await runMutation(() => saveFlashcardRow(supabase, updated), reviewOperation(), false);
+    await runMutation(() => saveFlashcardRow(supabase, updated), null, false);
+    
+    setData((current) => 
+      current ? {
+        ...current,
+        flashcards: current.flashcards.map(f => f.id === flashcard.id ? updated : f)
+      } : current
+    );
   }
 
   async function markNotificationAsReadAction(notificationId: string) {

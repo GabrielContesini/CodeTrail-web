@@ -50,28 +50,18 @@ export function FlashcardsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(
     data!.flashcards[0]?.id ?? null,
   );
-  const [revealedCards, setRevealedCards] = useState<Record<string, boolean>>({});
+  const [isRevealed, setIsRevealed] = useState(false);
 
-  const isRevealed = !!revealedCards[selectedId ?? ""] && selectedId !== null;
-
-  const revealCard = (id: string) => {
-    setRevealedCards((prev) => ({ ...prev, [id]: true }));
+  const revealCard = () => {
+    setIsRevealed(true);
   };
 
   const hideRevealed = () => {
-    setRevealedCards((prev) => {
-      const next = { ...prev };
-      delete next[selectedId ?? ""];
-      return next;
-    });
+    setIsRevealed(false);
   };
 
   useEffect(() => {
-    setRevealedCards((prev) => {
-      const next = { ...prev };
-      delete next[selectedId ?? ""];
-      return next;
-    });
+    setIsRevealed(false);
   }, [selectedId]);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
 
@@ -293,7 +283,7 @@ export function FlashcardsPage() {
                 {!isRevealed && (
                   <div className="flex justify-center pt-8 border-t border-outline-variant/10 relative z-10">
                     <button
-                      onClick={() => selectedId && revealCard(selectedId)}
+                      onClick={() => selectedId && revealCard()}
                       className="text-on-surface-variant hover:text-primary flex items-center gap-2 text-sm font-bold tracking-wider transition-all group/reveal"
                     >
                       <RefreshCw

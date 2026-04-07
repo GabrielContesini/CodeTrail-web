@@ -27,6 +27,23 @@ type EmbeddedCheckoutStage =
 
 const stripePromiseCache = new Map<string, Promise<Stripe | null>>();
 
+function getStripeAppearance(isDark: boolean) {
+  return {
+    theme: (isDark ? "night" : "stripe") as "night" | "stripe",
+    variables: {
+      colorPrimary: isDark ? "#6366f1" : "#6366f1",
+      colorBackground: isDark ? "#18181b" : "#ffffff",
+      colorText: isDark ? "#fafafa" : "#1f2937",
+      colorTextSecondary: isDark ? "#a1a1aa" : "#6b7280",
+      colorDanger: isDark ? "#ef4444" : "#dc2626",
+      fontFamily: isDark
+        ? "ui-sans-serif, system-ui, sans-serif"
+        : "ui-sans-serif, system-ui, sans-serif",
+      borderRadius: "12px",
+    },
+  };
+}
+
 type StripeWithEmbeddedCheckout = Stripe & {
   createEmbeddedCheckoutPage: (
     options: StripeEmbeddedCheckoutOptions,
@@ -66,6 +83,15 @@ export function EmbeddedCheckoutDialog({
   const onAfterSuccessRef = useRef(onAfterSuccess);
   const [stage, setStage] = useState<EmbeddedCheckoutStage>("booting");
   const [error, setError] = useState("");
+  const [isDarkMode, setIsDarkMode] = useState(true);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    setIsDarkMode(mediaQuery.matches);
+    const handler = (e: MediaQueryListEvent) => setIsDarkMode(e.matches);
+    mediaQuery.addEventListener("change", handler);
+    return () => mediaQuery.removeEventListener("change", handler);
+  }, []);
 
   useEffect(() => {
     onCheckoutCompleteRef.current = onCheckoutComplete;

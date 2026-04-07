@@ -212,12 +212,9 @@ function createWorkspaceFixture(): WorkspaceData {
     settings: {
       id: "settings-1",
       user_id: "user-1",
-      pomodoro_focus_minutes: 25,
-      pomodoro_short_break_minutes: 5,
-      pomodoro_long_break_minutes: 15,
-      pomodoro_long_break_interval: 4,
       notifications_enabled: true,
       theme_preference: "dark",
+      daily_reminder_hour: null,
       created_at: now,
       updated_at: now,
     },
