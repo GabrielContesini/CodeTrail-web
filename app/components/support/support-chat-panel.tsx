@@ -14,7 +14,7 @@ import {
   SendHorizonal,
   X,
 } from "lucide-react";
-import { type KeyboardEvent } from "react";
+import { useEffect, useRef, type KeyboardEvent } from "react";
 
 type LocalChatMessage = SupportChatMessage & {
   optimistic?: boolean;
@@ -59,6 +59,56 @@ export function SupportChatPanel({
   onComposerKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
   onSendMessage: () => void;
 }) {
+  const messagesViewportRef = useRef<HTMLDivElement | null>(null);
+  const previousMessageCountRef = useRef(0);
+  const previousConversationIdRef = useRef<string | null>(null);
+  const previousOpenRef = useRef(false);
+
+  useEffect(() => {
+    const activeConversationId = activeConversation?.id ?? null;
+    const justOpened = open && !previousOpenRef.current;
+    const conversationChanged =
+      activeConversationId !== previousConversationIdRef.current;
+    const hasNewMessage = messages.length > previousMessageCountRef.current;
+
+    if (!open) {
+      previousConversationIdRef.current = activeConversationId;
+      previousOpenRef.current = false;
+      previousMessageCountRef.current = messages.length;
+      return;
+    }
+
+    if (!justOpened && !conversationChanged && !hasNewMessage) {
+      previousConversationIdRef.current = activeConversationId;
+      previousOpenRef.current = open;
+      previousMessageCountRef.current = messages.length;
+      return;
+    }
+
+    const viewport = messagesViewportRef.current;
+    if (!viewport) {
+      previousConversationIdRef.current = activeConversationId;
+      previousOpenRef.current = open;
+      previousMessageCountRef.current = messages.length;
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      viewport.scrollTo({
+        top: viewport.scrollHeight,
+        behavior: !reducedMotion && hasNewMessage ? "smooth" : "auto",
+      });
+    });
+
+    previousConversationIdRef.current = activeConversationId;
+    previousOpenRef.current = open;
+    previousMessageCountRef.current = messages.length;
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [activeConversation?.id, messages, open, reducedMotion]);
+
   return (
     <AnimatePresence mode="wait">
       {open && (
@@ -77,7 +127,7 @@ export function SupportChatPanel({
           {/* Chat Panel */}
           <motion.div
             key="chat-panel"
-            className="fixed inset-x-4 bottom-4 z-[90] flex h-[min(500px,calc(100vh-2rem))] max-h-[calc(100vh-2rem)] w-auto flex-col overflow-hidden rounded-2xl shadow-2xl sm:inset-x-auto sm:bottom-8 sm:right-8 sm:h-[500px] sm:w-96"
+            className="fixed inset-x-4 bottom-4 z-[90] flex h-[min(500px,calc(100vh-2rem))] max-h-[calc(100vh-2rem)] w-auto flex-col overflow-hidden rounded-2xl font-ui text-on-surface shadow-2xl sm:inset-x-auto sm:bottom-8 sm:right-8 sm:h-[500px] sm:w-96"
             style={{
               backdropFilter: "blur(20px)",
               background: "rgba(14, 14, 14, 0.7)",
@@ -97,19 +147,16 @@ export function SupportChatPanel({
               }}
             >
               <div>
-                <h2 className="text-xs font-black tracking-[0.2em] text-white uppercase">
-                  SYSTEM SUPPORT
+                <h2 className="m-0 text-sm font-semibold uppercase tracking-[0.14em] text-white">
+                  System Support
                 </h2>
                 <div className="flex items-center gap-2 mt-1">
                   <div
                     className="w-1.5 h-1.5 rounded-full animate-pulse"
                     style={{ backgroundColor: "#10b981" }}
                   />
-                  <span
-                    className="text-[9px] font-bold tracking-widest uppercase"
-                    style={{ color: "#34d399" }}
-                  >
-                    AGENT_ONLINE
+                  <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-emerald-300">
+                    Agent online
                   </span>
                 </div>
               </div>
@@ -143,7 +190,7 @@ export function SupportChatPanel({
                   <p className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-1">
                     Falha de sincronização
                   </p>
-                  <p className="text-[11px] leading-relaxed text-red-300">
+                  <p className="text-sm leading-relaxed text-red-300">
                     {chatError}
                   </p>
                 </div>
@@ -168,7 +215,8 @@ export function SupportChatPanel({
               <div className="relative flex min-h-0 flex-1 flex-col">
                 {/* Messages Container */}
                 <div
-                  className="min-h-0 flex-1 overflow-y-auto px-6 py-6 space-y-6"
+                  ref={messagesViewportRef}
+                  className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-6 font-ui"
                   style={{
                     background: "rgba(14, 14, 14, 0.5)",
                   }}
@@ -196,11 +244,10 @@ export function SupportChatPanel({
                       </div>
                       <div className="max-w-[85%]">
                         <div
-                          className="p-3 rounded-xl text-sm leading-relaxed"
+                          className="rounded-xl p-3 text-sm leading-relaxed text-on-surface-variant"
                           style={{
                             background: "rgba(32, 32, 31, 0.5)",
                             border: "1px solid rgba(0, 227, 253, 0.2)",
-                            color: "#d1d5db",
                           }}
                         >
                           Canal seguro criado. Envie sua mensagem para abrir o atendimento em tempo real com o suporte.
@@ -222,11 +269,10 @@ export function SupportChatPanel({
                             {showDaySeparator ? (
                               <div className="mb-6 flex items-center justify-center">
                                 <span
-                                  className="rounded-full px-3 py-1 text-[9px] font-bold uppercase tracking-[0.18em]"
+                                  className="rounded-full px-3 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-on-surface-variant"
                                   style={{
                                     border: "1px solid rgba(0, 227, 253, 0.15)",
                                     background: "rgba(0, 227, 253, 0.05)",
-                                    color: "#9ca3af",
                                   }}
                                 >
                                   {formatDayLabel(message.createdAt)}
@@ -258,14 +304,12 @@ export function SupportChatPanel({
                     }}
                   >
                     <div className="mb-3 flex items-center justify-between gap-3">
-                      <p className="m-0 text-[10px] font-black uppercase tracking-[0.2em]">
-                        <span style={{ color: "#81ecff" }}>
-                          {isMaster
-                            ? `Respondendo ${activeConversation.customerName}`
-                            : "Digite sua mensagem"}
-                        </span>
+                      <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                        {isMaster
+                          ? `Respondendo ${activeConversation.customerName}`
+                          : "Digite sua mensagem"}
                       </p>
-                      <span className="text-[9px] text-gray-500 font-bold">
+                      <span className="text-[10px] font-medium text-on-surface-variant">
                         {composer.length}/2000
                       </span>
                     </div>
@@ -285,28 +329,18 @@ export function SupportChatPanel({
                           onKeyDown={onComposerKeyDown}
                           maxLength={2000}
                           autoFocus
-                          placeholder="Type command..."
+                          placeholder="Digite sua mensagem..."
                           style={{
-                            background: "transparent",
-                            border: "none",
-                            outline: "none",
-                            color: "white",
-                            fontSize: "10px",
-                            fontWeight: "700",
-                            letterSpacing: "0.08em",
-                            textTransform: "uppercase",
-                            resize: "none",
                             minHeight: "44px",
-                            fontFamily: "inherit",
                           }}
-                          className="w-full placeholder:text-gray-600"
+                          className="w-full resize-none bg-transparent text-sm leading-relaxed text-on-surface outline-none placeholder:text-on-surface-variant/60"
                         />
                       </div>
                       <button
                         type="button"
                         onClick={onSendMessage}
                         disabled={chatSending || !composer.trim()}
-                        className="h-10 px-4 rounded-lg font-black text-[10px] tracking-widest uppercase hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 flex-shrink-0"
+                        className="flex h-10 flex-shrink-0 items-center gap-2 rounded-lg px-4 text-[11px] font-semibold uppercase tracking-[0.12em] transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                         style={{
                           background: "#00e3fd",
                           color: "#003840",
@@ -317,7 +351,7 @@ export function SupportChatPanel({
                         ) : (
                           <SendHorizonal size={14} />
                         )}
-                        SEND
+                        Enviar
                       </button>
                     </div>
                   </div>
@@ -384,13 +418,13 @@ function SupportMessageBubble({
                   }
             }
           >
-            <p className="m-0 whitespace-pre-wrap break-words">
+            <p className="m-0 whitespace-pre-wrap break-words text-sm leading-relaxed">
               {message.body}
             </p>
 
             {/* Time & Status */}
             <div className="mt-2 flex items-center justify-end gap-2">
-              <span className="text-[9px] text-gray-600 font-mono">
+              <span className="text-[10px] font-medium text-on-surface-variant">
                 {formatTimeLabel(message.createdAt)}
               </span>
               {isOwn ? <SupportMessageStatus status={status} /> : null}
@@ -399,13 +433,11 @@ function SupportMessageBubble({
 
           {/* Sender Info */}
           <div className="mt-1 flex items-center gap-2">
-            <span className="text-[9px] font-black uppercase tracking-[0.18em]">
-              <span style={{ color: "#81ecff" }}>
-                {senderName}
-              </span>
+            <span className="text-[10px] font-medium text-primary">
+              {senderName}
             </span>
             {message.optimistic ? (
-              <span className="text-[9px] text-gray-600">enviando...</span>
+              <span className="text-[10px] text-on-surface-variant">enviando...</span>
             ) : null}
           </div>
         </div>
@@ -455,7 +487,7 @@ function ChatAvatar({
 
   return (
     <div
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-[10px] font-black uppercase tracking-[0.12em]"
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-[10px] font-semibold uppercase tracking-[0.08em]"
       style={{
         borderColor,
         background,
