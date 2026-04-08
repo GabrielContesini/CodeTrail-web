@@ -229,13 +229,22 @@ export async function sendCustomerSupportMessage(
           throw toSupportChatError(existingError ?? error);
         }
 
-        return mapMessageRow(existing as SupportMessageRow);
+        const refreshedConversation = await getConversationRowForCustomer(
+          supabase,
+          user.id,
+          conversationId,
+        );
+
+        return {
+          message: mapMessageRow(existing as SupportMessageRow),
+          conversation: mapConversationRow(refreshedConversation),
+        };
       }
 
       throw toSupportChatError(error);
     }
 
-    await updateConversationRow(supabase, conversationId, {
+    const refreshedConversation = await updateConversationRow(supabase, conversationId, {
       status: "pending_master",
       last_message_preview: body.slice(0, SUPPORT_LIMITS.preview),
       last_message_at: (data as SupportMessageRow).created_at,
@@ -245,7 +254,10 @@ export async function sendCustomerSupportMessage(
       updated_at: now,
     });
 
-    return mapMessageRow(data as SupportMessageRow);
+    return {
+      message: mapMessageRow(data as SupportMessageRow),
+      conversation: mapConversationRow(refreshedConversation),
+    };
   } catch (error) {
     throw ensureSupportChatError(error);
   }
@@ -292,11 +304,7 @@ async function getCustomerSupportThreadById(
   conversationId: string,
 ) {
   try {
-    const conversation = await getConversationRowForCustomer(
-      supabase,
-      userId,
-      conversationId,
-    );
+    await getConversationRowForCustomer(supabase, userId, conversationId);
 
     await markConversationDelivered(supabase, conversationId);
 

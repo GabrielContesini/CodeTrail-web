@@ -35,13 +35,13 @@ export async function POST(
       );
     }
 
-    const message = await sendCustomerSupportMessage(
+    const result = await sendCustomerSupportMessage(
       conversationId,
       body,
       payload.clientMessageId ?? null,
     );
 
-    return NextResponse.json({ message });
+    return NextResponse.json(result);
   } catch (error) {
     return buildSupportErrorResponse(error);
   }

@@ -35,8 +35,8 @@ import {
   type SetStateAction,
 } from "react";
 
-const CHAT_LIST_REFRESH_MS = 12000;
-const CHAT_THREAD_REFRESH_MS = 5000;
+const CHAT_LIST_FALLBACK_REFRESH_MS = 45000;
+const CHAT_THREAD_FALLBACK_REFRESH_MS = 30000;
 
 type LocalChatMessage = SupportChatMessage & {
   optimistic?: boolean;
@@ -70,9 +70,48 @@ interface SupportChatThreadResponse extends SupportChatConversationThread {
 
 interface SupportChatMessageResponse {
   message?: SupportChatMessage;
+  conversation?: SupportChatConversationSummary;
   error?: string;
   storageReady?: boolean;
 }
+
+type SupportConversationRealtimeRow = {
+  id: string;
+  public_id: string;
+  customer_user_id: string | null;
+  assigned_operator_id: string | null;
+  status: string;
+  origin: string;
+  subject: string;
+  customer_name: string;
+  customer_email: string;
+  customer_avatar_url: string | null;
+  customer_plan: string;
+  last_message_preview: string;
+  last_message_at: string | null;
+  customer_unread_count: number;
+  master_unread_count: number;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type SupportMessageRealtimeRow = {
+  id: string;
+  conversation_id: string;
+  sender_role: "customer" | "master";
+  sender_user_id: string | null;
+  sender_operator_id: string | null;
+  sender_name: string;
+  body: string;
+  content_type: "text";
+  client_message_id: string | null;
+  delivered_at: string | null;
+  read_at: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+};
 
 export function SupportWidget({
   origin,
@@ -85,6 +124,7 @@ export function SupportWidget({
   const { hoverLift, press, transition } = useMotionPreferences();
   const prefillAttemptedRef = useRef(false);
   const threadRefreshLockRef = useRef(false);
+  const markReadLockRef = useRef(false);
   const lastIncomingMessageAtRef = useRef<Map<string, string>>(new Map());
   const lastConversationSeenAtRef = useRef<Map<string, string>>(new Map());
   const [open, setOpen] = useState(false);
@@ -350,6 +390,89 @@ export function SupportWidget({
   }, [currentUserId, supabaseNotificationClient]);
 
   useEffect(() => {
+    if (
+      !authResolved ||
+      !authenticated ||
+      chatStorageReady !== true ||
+      !currentUserId ||
+      !hasSupabaseClientEnv()
+    ) {
+      return;
+    }
+
+    const channel = supabaseNotificationClient
+      .channel(`support-conversations:${currentUserId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "support_conversations",
+          filter: `customer_user_id=eq.${currentUserId}`,
+        },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            const deletedConversationId =
+              typeof payload.old?.id === "string" ? payload.old.id : null;
+
+            if (!deletedConversationId) {
+              return;
+            }
+
+            setConversationList((current) =>
+              current.filter((conversation) => conversation.id !== deletedConversationId),
+            );
+            setMessages((current) =>
+              current.filter((message) => message.conversationId !== deletedConversationId),
+            );
+            setSelectedConversationId((current) =>
+              current === deletedConversationId ? null : current,
+            );
+            return;
+          }
+
+          if (!payload.new) {
+            return;
+          }
+
+          const nextConversation = mapRealtimeConversationRow(
+            payload.new as SupportConversationRealtimeRow,
+            "customer",
+          );
+
+          setConversationList((current) => upsertConversation(current, nextConversation));
+
+          if (
+            currentUserId &&
+            notificationsEnabled &&
+            !(open && selectedConversationId === nextConversation.id)
+          ) {
+            void notifyFromConversationSummaries(
+              [nextConversation],
+              currentUserId,
+              lastConversationSeenAtRef,
+              supabaseNotificationClient,
+            );
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabaseNotificationClient.removeChannel(channel);
+    };
+  }, [
+    authResolved,
+    authenticated,
+    chatStorageReady,
+    currentUserId,
+    notificationsEnabled,
+    open,
+    selectedConversationId,
+    supabaseNotificationClient,
+  ]);
+
+  useEffect(() => {
     if (!authResolved || !authenticated || !hasSupabaseClientEnv()) {
       return;
     }
@@ -429,13 +552,20 @@ export function SupportWidget({
 
     const interval = window.setInterval(() => {
       void loadConversations(false);
-    }, open ? CHAT_LIST_REFRESH_MS : CHAT_LIST_REFRESH_MS * 2);
+    }, open ? CHAT_LIST_FALLBACK_REFRESH_MS : CHAT_LIST_FALLBACK_REFRESH_MS * 2);
 
     return () => {
       active = false;
       window.clearInterval(interval);
     };
-  }, [authResolved, authenticated, open]);
+  }, [
+    authResolved,
+    authenticated,
+    currentUserId,
+    notificationsEnabled,
+    open,
+    supabaseNotificationClient,
+  ]);
 
   useEffect(() => {
     if (conversationList.length === 0) {
@@ -551,6 +681,91 @@ export function SupportWidget({
       !open ||
       !authenticated ||
       chatStorageReady !== true ||
+      !selectedConversationId ||
+      !hasSupabaseClientEnv()
+    ) {
+      return;
+    }
+
+    let active = true;
+
+    const channel = supabaseNotificationClient
+      .channel(`support-messages:${selectedConversationId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "support_messages",
+          filter: `conversation_id=eq.${selectedConversationId}`,
+        },
+        (payload) => {
+          if (!active) {
+            return;
+          }
+
+          if (payload.eventType === "DELETE") {
+            const deletedMessageId =
+              typeof payload.old?.id === "string" ? payload.old.id : null;
+
+            if (!deletedMessageId) {
+              return;
+            }
+
+            setMessages((current) =>
+              current.filter((message) => message.id !== deletedMessageId),
+            );
+            return;
+          }
+
+          if (!payload.new) {
+            return;
+          }
+
+          const nextMessage = mapRealtimeMessageRow(
+            payload.new as SupportMessageRealtimeRow,
+          );
+
+          setMessages((current) => upsertMessage(current, nextMessage));
+
+          if (
+            payload.eventType === "INSERT" &&
+            nextMessage.senderRole !== viewerRole &&
+            !markReadLockRef.current
+          ) {
+            markReadLockRef.current = true;
+            void markConversationAsRead(
+              selectedConversationId,
+              viewerRole,
+              active,
+              setConversationList,
+              setMessages,
+            ).finally(() => {
+              markReadLockRef.current = false;
+            });
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      active = false;
+      void supabaseNotificationClient.removeChannel(channel);
+    };
+  }, [
+    authenticated,
+    chatStorageReady,
+    open,
+    selectedConversationId,
+    supabaseNotificationClient,
+    viewerRole,
+  ]);
+
+  useEffect(() => {
+    if (
+      !open ||
+      !authenticated ||
+      chatStorageReady !== true ||
       !selectedConversationId
     ) {
       return;
@@ -653,14 +868,22 @@ export function SupportWidget({
 
     const interval = window.setInterval(() => {
       void loadThread(false);
-    }, CHAT_THREAD_REFRESH_MS);
+    }, CHAT_THREAD_FALLBACK_REFRESH_MS);
 
     return () => {
       active = false;
       window.clearInterval(interval);
       threadRefreshLockRef.current = false;
     };
-  }, [authenticated, chatStorageReady, open, selectedConversationId]);
+  }, [
+    authenticated,
+    chatStorageReady,
+    currentUserId,
+    notificationsEnabled,
+    open,
+    selectedConversationId,
+    supabaseNotificationClient,
+  ]);
 
   function updateField(field: keyof SupportFormState, value: string) {
     setForm((current) => ({
@@ -773,6 +996,7 @@ export function SupportWidget({
     }
 
     const clientMessageId = createClientMessageId();
+    const previousConversation = activeConversation;
     const optimisticMessage = createOptimisticMessage({
       body,
       clientMessageId,
@@ -784,22 +1008,26 @@ export function SupportWidget({
     setChatSending(true);
     setChatError(null);
     setComposer("");
-    setMessages((current) => [...current, optimisticMessage]);
-    setConversationList((current) =>
-      current.map((conversation) =>
-        conversation.id === conversationId
-          ? {
-              ...conversation,
-              lastMessageAt: optimisticMessage.createdAt,
-              lastMessagePreview: optimisticMessage.body,
-              status:
-                viewerRole === "customer"
-                  ? "pending_master"
-                  : "pending_customer",
-            }
-          : conversation,
-      ),
-    );
+    setMessages((current) => upsertMessage(current, optimisticMessage));
+    setConversationList((current) => {
+      const currentConversation =
+        current.find((conversation) => conversation.id === conversationId) ??
+        previousConversation;
+
+      if (!currentConversation) {
+        return current;
+      }
+
+      return upsertConversation(current, {
+        ...currentConversation,
+        lastMessageAt: optimisticMessage.createdAt,
+        lastMessagePreview: optimisticMessage.body,
+        status:
+          viewerRole === "customer"
+            ? "pending_master"
+            : "pending_customer",
+      });
+    });
 
     try {
       const response = await fetch(
@@ -821,6 +1049,11 @@ export function SupportWidget({
         setMessages((current) =>
           current.filter((message) => message.clientMessageId !== clientMessageId),
         );
+        if (previousConversation) {
+          setConversationList((current) =>
+            upsertConversation(current, previousConversation),
+          );
+        }
         setComposer(body);
         setChatError(
           result?.error ?? "Nao foi possivel enviar a mensagem agora.",
@@ -829,14 +1062,27 @@ export function SupportWidget({
       }
 
       setMessages((current) =>
-        current.map((message) =>
-          message.clientMessageId === clientMessageId ? result.message! : message,
+        upsertMessage(
+          current.map((message) =>
+            message.clientMessageId === clientMessageId ? result.message! : message,
+          ),
+          result.message!,
         ),
       );
+      if (result.conversation) {
+        setConversationList((current) =>
+          upsertConversation(current, result.conversation!),
+        );
+      }
     } catch {
       setMessages((current) =>
         current.filter((message) => message.clientMessageId !== clientMessageId),
       );
+      if (previousConversation) {
+        setConversationList((current) =>
+          upsertConversation(current, previousConversation),
+        );
+      }
       setComposer(body);
       setChatError("Nao foi possivel enviar a mensagem agora.");
     } finally {
@@ -962,6 +1208,94 @@ function upsertConversation(
 
     return rightValue.localeCompare(leftValue);
   });
+}
+
+function upsertMessage(
+  messages: LocalChatMessage[],
+  nextMessage: SupportChatMessage,
+) {
+  const withoutCurrent = messages.filter((message) => {
+    if (message.id === nextMessage.id) {
+      return false;
+    }
+
+    if (
+      nextMessage.clientMessageId &&
+      message.clientMessageId &&
+      message.clientMessageId === nextMessage.clientMessageId
+    ) {
+      return false;
+    }
+
+    return true;
+  });
+
+  return [...withoutCurrent, nextMessage].sort((left, right) =>
+    left.createdAt.localeCompare(right.createdAt),
+  );
+}
+
+function mapRealtimeConversationRow(
+  row: SupportConversationRealtimeRow,
+  viewerRole: SupportChatViewerRole,
+): SupportChatConversationSummary {
+  return {
+    id: row.id,
+    publicId: row.public_id,
+    customerUserId: row.customer_user_id,
+    assignedOperatorId: row.assigned_operator_id,
+    status: isSupportConversationStatus(row.status) ? row.status : "open",
+    origin: row.origin,
+    subject: row.subject,
+    customerName: row.customer_name,
+    customerEmail: row.customer_email,
+    customerAvatarUrl: row.customer_avatar_url,
+    customerPlan: row.customer_plan,
+    lastMessagePreview: row.last_message_preview,
+    lastMessageAt: row.last_message_at,
+    unreadCountForViewer:
+      viewerRole === "master"
+        ? row.master_unread_count
+        : row.customer_unread_count,
+    customerUnreadCount: row.customer_unread_count,
+    masterUnreadCount: row.master_unread_count,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    metadata: row.metadata ?? {},
+  };
+}
+
+function mapRealtimeMessageRow(
+  row: SupportMessageRealtimeRow,
+): SupportChatMessage {
+  return {
+    id: row.id,
+    conversationId: row.conversation_id,
+    senderRole: row.sender_role,
+    senderUserId: row.sender_user_id,
+    senderOperatorId: row.sender_operator_id,
+    senderName: row.sender_name,
+    body: row.body,
+    contentType: row.content_type,
+    clientMessageId: row.client_message_id,
+    deliveredAt: row.delivered_at,
+    readAt: row.read_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    metadata: row.metadata ?? {},
+  };
+}
+
+function isSupportConversationStatus(
+  value: string,
+): value is SupportChatConversationSummary["status"] {
+  return (
+    value === "open" ||
+    value === "pending_customer" ||
+    value === "pending_master" ||
+    value === "resolved" ||
+    value === "archived"
+  );
 }
 
 function hasUnreadIncomingMessage(
