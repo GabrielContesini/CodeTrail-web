@@ -33,6 +33,7 @@ export async function GET() {
       level: report.status === "degraded" ? "warn" : undefined,
       metadata: {
         healthStatus: report.status,
+        skippedChecks: report.summary.skipped,
         degradedChecks: report.summary.degraded,
         errorChecks: report.summary.error,
       },
@@ -72,6 +73,7 @@ export async function GET() {
         durationMs: getRouteDurationMs(routeContext),
         summary: {
           ok: 0,
+          skipped: 0,
           degraded: 0,
           error: 1,
         },

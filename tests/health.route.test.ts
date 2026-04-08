@@ -18,6 +18,7 @@ describe("GET /api/health", () => {
       timestamp: "2026-04-08T12:00:00.000Z",
       summary: {
         ok: 5,
+        skipped: 0,
         degraded: 0,
         error: 0,
       },
@@ -62,6 +63,7 @@ describe("GET /api/health", () => {
       status: "ok",
       summary: {
         ok: 5,
+        skipped: 0,
         degraded: 0,
         error: 0,
       },
@@ -76,6 +78,7 @@ describe("GET /api/health", () => {
       timestamp: "2026-04-08T12:00:00.000Z",
       summary: {
         ok: 2,
+        skipped: 0,
         degraded: 1,
         error: 2,
       },
@@ -121,8 +124,67 @@ describe("GET /api/health", () => {
       status: "error",
       summary: {
         ok: 2,
+        skipped: 0,
         degraded: 1,
         error: 2,
+      },
+    });
+  });
+
+  it("returns 200 when optional active probes are skipped but the overall health remains ok", async () => {
+    collectApiHealthReport.mockResolvedValue({
+      status: "ok",
+      timestamp: "2026-04-08T12:00:00.000Z",
+      summary: {
+        ok: 3,
+        skipped: 2,
+        degraded: 0,
+        error: 0,
+      },
+      checks: {
+        app: {
+          status: "ok",
+          critical: true,
+          summary: "App Router operacional.",
+        },
+        auth: {
+          status: "ok",
+          critical: true,
+          summary: "Camada de auth/session do Supabase acessível.",
+        },
+        supabase: {
+          status: "skipped",
+          critical: true,
+          summary: "O probe administrativo do Supabase foi pulado porque a service role não está disponível neste ambiente.",
+          errorCategory: "config",
+        },
+        billing: {
+          status: "skipped",
+          critical: true,
+          summary: "O probe ativo do Stripe foi pulado porque o secret key não está disponível neste ambiente.",
+          errorCategory: "config",
+        },
+        integrations: {
+          status: "ok",
+          critical: false,
+          summary: "Integrações auxiliares críticas estão configuradas.",
+        },
+      },
+    });
+
+    const { GET } = await import("../app/api/health/route");
+    const response = await GET();
+
+    expect(response.status).toBe(200);
+
+    const payload = await response.json();
+    expect(payload).toMatchObject({
+      status: "ok",
+      summary: {
+        ok: 3,
+        skipped: 2,
+        degraded: 0,
+        error: 0,
       },
     });
   });

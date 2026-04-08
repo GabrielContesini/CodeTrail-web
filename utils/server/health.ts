@@ -9,9 +9,10 @@ const HEALTHCHECK_TIMEOUT_MS = 4_000;
 const DEFAULT_CLICKUP_SUPPORT_LIST_ID = "901712375712";
 
 export type ApiHealthStatus = "ok" | "degraded" | "error";
+export type ApiHealthCheckStatus = ApiHealthStatus | "skipped";
 
 export interface ApiHealthCheck {
-  status: ApiHealthStatus;
+  status: ApiHealthCheckStatus;
   critical: boolean;
   summary: string;
   errorCategory?: RouteErrorCategory;
@@ -23,6 +24,7 @@ export interface ApiHealthReport {
   timestamp: string;
   summary: {
     ok: number;
+    skipped: number;
     degraded: number;
     error: number;
   };
@@ -137,17 +139,33 @@ async function checkAuthHealth(): Promise<ApiHealthCheck> {
 
 async function checkSupabaseHealth(): Promise<ApiHealthCheck> {
   const env = resolveAdminSupabaseEnv();
-  if (!env.url || !env.serviceRoleKey) {
+  if (!env.url) {
     return {
-      status: "degraded",
+      status: "error",
       critical: true,
-      summary: "Não foi possível validar o banco com service role neste ambiente.",
+      summary: "Não foi possível validar o banco porque a URL administrativa do Supabase não está configurada.",
       errorCategory: "config",
       details: {
-        supabaseUrlConfigured: Boolean(env.url),
+        supabaseUrlConfigured: false,
         serviceRoleConfigured: Boolean(env.serviceRoleKey),
         databaseReady: null,
         supportStorageReady: null,
+      },
+    };
+  }
+
+  if (!env.serviceRoleKey) {
+    return {
+      status: "skipped",
+      critical: true,
+      summary: "O probe administrativo do Supabase foi pulado porque a service role não está disponível neste ambiente.",
+      errorCategory: "config",
+      details: {
+        supabaseUrlConfigured: Boolean(env.url),
+        serviceRoleConfigured: false,
+        databaseReady: null,
+        supportStorageReady: null,
+        probeSkipped: true,
       },
     };
   }
@@ -236,15 +254,16 @@ async function checkBillingHealth(): Promise<ApiHealthCheck> {
 
   if (!secretKeyConfigured) {
     return {
-      status: "degraded",
+      status: "skipped",
       critical: true,
-      summary: "Billing básico está configurado, mas o Stripe secret key não está disponível para checks ativos.",
+      summary: "O probe ativo do Stripe foi pulado porque o secret key não está disponível neste ambiente.",
       errorCategory: "config",
       details: {
         edgeFunctionsConfigured,
         stripePublishableKeyConfigured: publishableKeyConfigured,
         stripeSecretKeyConfigured: false,
         stripeReachable: null,
+        probeSkipped: true,
       },
     };
   }
@@ -350,7 +369,7 @@ function computeOverallHealthStatus(checks: Record<string, ApiHealthCheck>): Api
     return "error";
   }
 
-  if (values.some((check) => check.status !== "ok")) {
+  if (values.some((check) => check.status === "degraded")) {
     return "degraded";
   }
 
@@ -365,6 +384,7 @@ function summarizeChecks(checks: Record<string, ApiHealthCheck>) {
     },
     {
       ok: 0,
+      skipped: 0,
       degraded: 0,
       error: 0,
     },
