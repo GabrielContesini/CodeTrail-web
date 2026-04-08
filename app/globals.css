@@ -67,9 +67,9 @@
   --color-danger: var(--danger);
   --color-error: var(--error);
   --color-warning: var(--warning);
-  --font-sans: var(--font-inter), sans-serif;
-  --font-display: var(--font-inter), sans-serif;
-  --font-ui: var(--font-inter), sans-serif;
+  --font-sans: var(--font-jetbrains-mono), monospace;
+  --font-display: var(--font-space-grotesk), sans-serif;
+  --font-ui: var(--font-manrope), sans-serif;
 }
 
 *,

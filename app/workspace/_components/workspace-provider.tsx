@@ -73,6 +73,7 @@ import type {
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 const MIN_OPERATION_MODAL_MS = 800;
+const ONBOARDING_DISMISS_STORAGE_PREFIX = "codetrail-workspace-onboarding-dismissed";
 
 export function WorkspaceProvider({
   initialUser,
@@ -91,6 +92,8 @@ export function WorkspaceProvider({
   const [operation, setOperation] = useState<WorkspaceOperationState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [onboardingDismissed, setOnboardingDismissed] = useState(false);
+  const [onboardingDismissLoaded, setOnboardingDismissLoaded] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [embeddedCheckout, setEmbeddedCheckout] = useState<{
     clientSecret: string;
@@ -100,10 +103,38 @@ export function WorkspaceProvider({
   const pendingOperationsRef = useRef(0);
   const onboardingAutoOpenedRef = useRef(false);
   const onboardingCompleted = data?.profile?.onboarding_completed ?? false;
+  const onboardingDismissStorageKey = `${ONBOARDING_DISMISS_STORAGE_PREFIX}:${initialUser.id}`;
 
   useEffect(() => {
     clearPlanIntent();
   }, [clearPlanIntent]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      setOnboardingDismissLoaded(true);
+      return;
+    }
+
+    const dismissed = window.localStorage.getItem(onboardingDismissStorageKey) === "1";
+    setOnboardingDismissed(dismissed);
+    setOnboardingDismissLoaded(true);
+  }, [onboardingDismissStorageKey]);
+
+  useEffect(() => {
+    if (!onboardingDismissLoaded || !onboardingCompleted || typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.removeItem(onboardingDismissStorageKey);
+    if (onboardingDismissed) {
+      setOnboardingDismissed(false);
+    }
+  }, [
+    onboardingCompleted,
+    onboardingDismissLoaded,
+    onboardingDismissStorageKey,
+    onboardingDismissed,
+  ]);
 
   useEffect(() => {
     let active = true;
@@ -134,8 +165,10 @@ export function WorkspaceProvider({
 
   useEffect(() => {
     if (
+      !onboardingDismissLoaded ||
       loading ||
       onboardingAutoOpenedRef.current ||
+      onboardingDismissed ||
       onboardingOpen ||
       modalOpen ||
       embeddedCheckout ||
@@ -150,7 +183,16 @@ export function WorkspaceProvider({
 
     onboardingAutoOpenedRef.current = true;
     setOnboardingOpen(true);
-  }, [data, embeddedCheckout, loading, modalOpen, onboardingOpen, pathname]);
+  }, [
+    data,
+    embeddedCheckout,
+    loading,
+    modalOpen,
+    onboardingDismissLoaded,
+    onboardingDismissed,
+    onboardingOpen,
+    pathname,
+  ]);
 
   function applyWorkspaceResult(result: WorkspaceData & { errors: string[] }) {
     setData(result);
@@ -803,6 +845,10 @@ export function WorkspaceProvider({
   }
 
   function closeOnboarding() {
+    onboardingAutoOpenedRef.current = true;
+    if (!onboardingCompleted) {
+      persistOnboardingDismissal(true);
+    }
     setOnboardingOpen(false);
   }
 
@@ -829,6 +875,7 @@ export function WorkspaceProvider({
 
     try {
       await saveProfileRow(supabase, row);
+      persistOnboardingDismissal(false);
       setData((current) =>
         current
           ? {
@@ -846,6 +893,21 @@ export function WorkspaceProvider({
       );
       throw nextError;
     }
+  }
+
+  function persistOnboardingDismissal(nextDismissed: boolean) {
+    setOnboardingDismissed(nextDismissed);
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (nextDismissed) {
+      window.localStorage.setItem(onboardingDismissStorageKey, "1");
+      return;
+    }
+
+    window.localStorage.removeItem(onboardingDismissStorageKey);
   }
 
   const value: WorkspaceContextValue = {
@@ -876,8 +938,8 @@ export function WorkspaceProvider({
     deleteProject,
       saveProjectStep,
       deleteProjectStep,
-      selectTrack,
-      startTrack,
+    selectTrack,
+    startTrack,
       pauseTrack,
     resumeTrack,
     completeTrackStep,
@@ -1060,7 +1122,13 @@ function shouldAutoOpenOnboarding(pathname: string, data: WorkspaceData) {
     data.flashcards.length > 0 ||
     data.mindMaps.length > 0;
 
-  return !hasMeaningfulActivity;
+  const hasMeaningfulSetup =
+    Boolean(data.profile?.selected_track_id) ||
+    Boolean(data.goal?.primary_goal?.trim()) ||
+    data.trackStates.length > 0 ||
+    data.trackModuleStates.length > 0;
+
+  return !hasMeaningfulActivity && !hasMeaningfulSetup;
 }
 
 function nowIso() {

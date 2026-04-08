@@ -79,18 +79,8 @@ export function WorkspaceOnboarding({
       return;
     }
 
-    if (isFirstRun) {
-      setSubmitting(true);
-      try {
-        await onComplete();
-      } finally {
-        setSubmitting(false);
-      }
-      return;
-    }
-
     onClose();
-  }, [isFirstRun, onClose, onComplete, submitting]);
+  }, [onClose, submitting]);
 
   const handlePrimaryAction = useCallback(async () => {
     if (!isLastStep) {
@@ -174,7 +164,7 @@ export function WorkspaceOnboarding({
           exit={{ opacity: 0 }}
           transition={overlayTransition}
         >
-          <div className="absolute inset-0 bg-background/88 backdrop-blur-xl" />
+          <div className="absolute inset-0 bg-background/76 backdrop-blur-lg" />
           <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
             <motion.div
               className="absolute -left-20 top-12 h-72 w-72 rounded-full bg-primary/12 blur-[110px]"
@@ -189,7 +179,7 @@ export function WorkspaceOnboarding({
             <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.018)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.018)_1px,transparent_1px)] bg-[size:64px_64px] opacity-60 [mask-image:radial-gradient(circle_at_center,black_30%,transparent_88%)]" />
           </div>
 
-          <div className="relative flex min-h-screen items-stretch justify-center p-0 md:p-6">
+          <div className="relative flex min-h-screen items-stretch justify-center p-0 sm:p-4 md:items-center md:p-6">
             <motion.div
               ref={dialogRef}
               role="dialog"
@@ -197,7 +187,7 @@ export function WorkspaceOnboarding({
               aria-labelledby="workspace-onboarding-title"
               data-testid="workspace-onboarding"
               tabIndex={-1}
-              className="relative z-10 flex min-h-screen w-full max-w-[1260px] flex-col overflow-hidden border border-border/70 bg-[rgba(6,11,17,0.92)] shadow-[0_32px_90px_rgba(0,0,0,0.46)] md:min-h-0 md:rounded-[32px]"
+              className="relative z-10 flex min-h-[100dvh] w-full max-w-[1180px] flex-col overflow-hidden border border-border/70 bg-[rgba(6,11,17,0.94)] shadow-[0_28px_72px_rgba(0,0,0,0.42)] md:h-[88vh] md:max-h-[820px] md:min-h-0 md:rounded-[30px]"
               initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 24, scale: 0.985 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 18, scale: 0.99 }}
@@ -205,8 +195,8 @@ export function WorkspaceOnboarding({
             >
               <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/55 to-transparent" />
 
-              <div className="grid min-h-screen flex-1 lg:min-h-[760px] lg:grid-cols-[0.94fr_1.06fr]">
-                <section className="relative flex flex-col border-b border-border/60 px-5 py-5 sm:px-6 sm:py-6 lg:border-b-0 lg:border-r lg:px-8 lg:py-8">
+              <div className="grid min-h-[100dvh] flex-1 md:min-h-0 lg:grid-cols-[0.94fr_1.06fr]">
+                <section className="relative flex min-h-0 flex-col border-b border-border/60 px-5 py-5 sm:px-6 sm:py-6 md:overflow-y-auto lg:border-b-0 lg:border-r lg:px-8 lg:py-8">
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="flex flex-col gap-3">
                       <div className="flex flex-wrap items-center gap-3">
@@ -248,7 +238,7 @@ export function WorkspaceOnboarding({
                       className="rounded-full px-4"
                     >
                       <X size={16} />
-                      {isFirstRun ? "Pular onboarding" : "Fechar tour"}
+                      {isFirstRun ? "Agora nao" : "Fechar tour"}
                     </GhostButton>
                   </div>
 
@@ -332,7 +322,7 @@ export function WorkspaceOnboarding({
                   </div>
                 </section>
 
-                <section className="relative flex flex-col overflow-hidden px-5 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+                <section className="relative flex min-h-0 flex-col overflow-hidden px-5 py-5 sm:px-6 sm:py-6 md:overflow-y-auto lg:px-8 lg:py-8">
                   <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent lg:hidden" />
 
                   <div className="mb-5 flex items-center justify-between gap-3">
